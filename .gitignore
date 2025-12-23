@@ -26,3 +26,8 @@ htmlcov/
 # Logs  
 *.log  
 logs/ 
+*.csv
+data/
+dataset/
+
+
