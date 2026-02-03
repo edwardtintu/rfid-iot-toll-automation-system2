@@ -1,0 +1,24 @@
+{
+  "initial_trust_score": 100,
+
+  "thresholds": {
+    "degraded": 70,
+    "suspended": 40
+  },
+
+  "penalties": {
+    "replay_attack": 15,
+    "rate_limit_violation": 10,
+    "auth_failure": 40,
+    "key_version_mismatch": 20,
+    "invalid_card_attempt": 5,
+    "invalid_speed_value": 10,
+    "balance_manipulation": 30,
+    "operation_while_suspended": 5,
+    "peer_outlier": 12
+  },
+
+  "rewards": {
+    "clean_transaction": 1
+  }
+}

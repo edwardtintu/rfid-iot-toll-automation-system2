@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Reader Management - HTMS</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <header>
+    <h1>HTMS – Reader Management</h1>
+    <nav>
+      <a href="index.html">Dashboard</a> | 
+      <a href="toll-processing.html">Toll Processing</a> | 
+      <a href="reader-management.html">Reader Management</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="dashboard-container">
+      <!-- Register New Reader -->
+      <section class="card">
+        <h2>Register New Reader</h2>
+        <form id="register-reader-form">
+          <div>
+            <label for="reader-id">Reader ID:</label>
+            <input type="text" id="reader-id" placeholder="Enter Reader ID" required>
+          </div>
+          
+          <div>
+            <label for="reader-secret">Secret Key:</label>
+            <input type="text" id="reader-secret" placeholder="Enter Secret Key" required>
+          </div>
+          
+          <button type="submit">Register Reader</button>
+        </form>
+        
+        <div id="register-result" style="margin-top: 20px;"></div>
+      </section>
+
+      <!-- Reader Trust Status -->
+      <section class="card">
+        <h2>Reader Trust Status</h2>
+        <div id="reader-trust-status">Loading...</div>
+      </section>
+
+      <!-- Reader Violations -->
+      <section class="card">
+        <h2>Reader Violations</h2>
+        <div>
+          <input type="text" id="violation-reader-id" placeholder="Enter Reader ID">
+          <button onclick="getReaderViolations()">Get Violations</button>
+        </div>
+        <div id="reader-violations" style="margin-top: 20px;"></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE_URL = "http://localhost:8000";
+    
+    // Handle reader registration
+    document.getElementById('register-reader-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const readerId = document.getElementById('reader-id').value;
+      const secret = document.getElementById('reader-secret').value;
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/register_reader`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: `reader_id=${encodeURIComponent(readerId)}&secret=${encodeURIComponent(secret)}`
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          document.getElementById('register-result').innerHTML = `
+            <div class="success">
+              <h3>Reader Registered Successfully!</h3>
+              <p>${result.message}</p>
+            </div>
+          `;
+          // Clear the form
+          document.getElementById('reader-id').value = '';
+          document.getElementById('reader-secret').value = '';
+        } else {
+          document.getElementById('register-result').innerHTML = `
+            <div class="error">
+              <h3>Error Registering Reader</h3>
+              <p>${result.detail || 'Unknown error'}</p>
+            </div>
+          `;
+        }
+      } catch (err) {
+        document.getElementById('register-result').innerHTML = `
+          <div class="error">
+            <h3>Error</h3>
+            <p>${err.message}</p>
+          </div>
+        `;
+      }
+    });
+    
+    // Load reader trust status
+    async function loadReaderTrustStatus() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/readers/trust`);
+        if (response.ok) {
+          const readers = await response.json();
+          const container = document.getElementById("reader-trust-status");
+          
+          if (readers.length === 0) {
+            container.innerHTML = "<p>No readers registered yet.</p>";
+            return;
+          }
+          
+          let html = '<div class="readers-list">';
+          readers.forEach(reader => {
+            const trustClass = reader.trust_score >= 80 ? 'trust-high' : 
+                              reader.trust_score >= 50 ? 'trust-medium' : 'trust-low';
+            
+            html += `
+              <div class="reader-item">
+                <strong>${reader.reader_id}</strong><br>
+                <span class="${trustClass}">Trust: ${reader.trust_score} (${reader.trust_status})</span><br>
+                <small>Last updated: ${reader.last_updated || 'N/A'}</small>
+                <button onclick="resetReaderTrust('${reader.reader_id}')">Reset Trust</button>
+                <button onclick="revokeReader('${reader.reader_id}')">Revoke</button>
+              </div>
+            `;
+          });
+          html += '</div>';
+          container.innerHTML = html;
+        } else {
+          document.getElementById("reader-trust-status").innerHTML = "<p>Error loading reader trust status.</p>";
+        }
+      } catch (err) {
+        document.getElementById("reader-trust-status").innerHTML = `<p>Error: ${err.message}</p>`;
+      }
+    }
+    
+    // Get reader violations
+    async function getReaderViolations() {
+      const readerId = document.getElementById('violation-reader-id').value.trim();
+      if (!readerId) {
+        document.getElementById('reader-violations').innerHTML = '<p>Please enter a reader ID.</p>';
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/reader/violations/${readerId}`);
+        
+        if (response.ok) {
+          const violations = await response.json();
+          const container = document.getElementById('reader-violations');
+          
+          if (violations.length === 0) {
+            container.innerHTML = '<p>No violations found for this reader.</p>';
+            return;
+          }
+          
+          let html = '<div class="violations-list">';
+          violations.forEach(violation => {
+            html += `
+              <div class="violation-item">
+                <strong>${violation.violation_type}</strong><br>
+                <span>Score Delta: ${violation.score_delta}</span><br>
+                <small>Time: ${violation.timestamp || 'N/A'}</small><br>
+                <small>Details: ${violation.details || 'N/A'}</small>
+              </div>
+            `;
+          });
+          html += '</div>';
+          container.innerHTML = html;
+        } else {
+          document.getElementById('reader-violations').innerHTML = '<p>Error loading violations.</p>';
+        }
+      } catch (err) {
+        document.getElementById('reader-violations').innerHTML = `<p>Error: ${err.message}</p>`;
+      }
+    }
+    
+    // Reset reader trust
+    async function resetReaderTrust(readerId) {
+      if (!confirm(`Are you sure you want to reset trust for reader ${readerId}?`)) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/reader/trust/reset/${readerId}`, {
+          method: 'POST'
+        });
+        
+        if (response.ok) {
+          alert(`Trust for reader ${readerId} has been reset.`);
+          // Reload the trust status
+          loadReaderTrustStatus();
+        } else {
+          alert('Error resetting reader trust.');
+        }
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+      }
+    }
+    
+    // Revoke reader
+    async function revokeReader(readerId) {
+      if (!confirm(`Are you sure you want to revoke reader ${readerId}?`)) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/revoke_reader`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: `reader_id=${encodeURIComponent(readerId)}`
+        });
+        
+        if (response.ok) {
+          alert(`Reader ${readerId} has been revoked.`);
+          // Reload the trust status
+          loadReaderTrustStatus();
+        } else {
+          alert('Error revoking reader.');
+        }
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+      }
+    }
+    
+    // Load reader trust status when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      loadReaderTrustStatus();
+    });
+  </script>
+</body>
+</html>

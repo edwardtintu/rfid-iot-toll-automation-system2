@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Toll Processing - HTMS</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <header>
+    <h1>HTMS – Toll Processing</h1>
+    <nav>
+      <a href="index.html">Dashboard</a> | 
+      <a href="toll-processing.html">Toll Processing</a> | 
+      <a href="reader-management.html">Reader Management</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="dashboard-container">
+      <!-- Toll Transaction Form -->
+      <section class="card">
+        <h2>Process Toll Transaction</h2>
+        <form id="toll-form">
+          <div>
+            <label for="tag-hash">Tag Hash:</label>
+            <input type="text" id="tag-hash" placeholder="Enter RFID Tag Hash" required>
+          </div>
+          
+          <div>
+            <label for="reader-id">Reader ID:</label>
+            <input type="text" id="reader-id" placeholder="Enter Reader ID" required>
+          </div>
+          
+          <div>
+            <label for="speed">Speed (km/h):</label>
+            <input type="number" id="speed" placeholder="Vehicle Speed" value="60">
+          </div>
+          
+          <div>
+            <label for="timestamp">Timestamp:</label>
+            <input type="number" id="timestamp" placeholder="Unix Timestamp" readonly>
+          </div>
+          
+          <div>
+            <label for="nonce">Nonce:</label>
+            <input type="text" id="nonce" placeholder="Random Nonce" readonly>
+          </div>
+          
+          <div>
+            <label for="signature">Signature:</label>
+            <input type="text" id="signature" placeholder="HMAC Signature" required>
+          </div>
+          
+          <div>
+            <label for="key-version">Key Version:</label>
+            <input type="text" id="key-version" placeholder="Key Version" value="1">
+          </div>
+          
+          <button type="submit">Process Toll Transaction</button>
+        </form>
+        
+        <div id="toll-result" style="margin-top: 20px;"></div>
+      </section>
+
+      <!-- Card Lookup -->
+      <section class="card">
+        <h2>Card Lookup</h2>
+        <div>
+          <input type="text" id="lookup-tag" placeholder="Enter Tag Hash for Lookup">
+          <button onclick="lookupCard()">Lookup Card</button>
+        </div>
+        
+        <div id="card-details" style="margin-top: 20px;"></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE_URL = "http://localhost:8000";
+    
+    // Generate timestamp and nonce on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('timestamp').value = Math.floor(Date.now() / 1000);
+      document.getElementById('nonce').value = Math.random().toString(36).substring(2, 15);
+    });
+    
+    // Handle toll form submission
+    document.getElementById('toll-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const formData = {
+        tag_hash: document.getElementById('tag-hash').value,
+        reader_id: document.getElementById('reader-id').value,
+        speed: parseInt(document.getElementById('speed').value) || 60,
+        timestamp: document.getElementById('timestamp').value,
+        nonce: document.getElementById('nonce').value,
+        signature: document.getElementById('signature').value,
+        key_version: document.getElementById('key-version').value
+      };
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/toll`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          document.getElementById('toll-result').innerHTML = `
+            <div class="success">
+              <h3>Transaction Processed Successfully!</h3>
+              <p><strong>Action:</strong> ${result.action}</p>
+              <p><strong>Reasons:</strong> ${Array.isArray(result.reasons) ? result.reasons.join(', ') : result.reasons}</p>
+              <p><strong>New Balance:</strong> ₹${result.new_balance || 'N/A'}</p>
+              <p><strong>Trust Score:</strong> ${result.trust_info?.trust_score || 'N/A'}</p>
+              <p><strong>Trust Status:</strong> ${result.trust_info?.trust_status || 'N/A'}</p>
+            </div>
+          `;
+        } else {
+          document.getElementById('toll-result').innerHTML = `
+            <div class="error">
+              <h3>Error Processing Transaction</h3>
+              <p>${result.detail || 'Unknown error'}</p>
+            </div>
+          `;
+        }
+      } catch (err) {
+        document.getElementById('toll-result').innerHTML = `
+          <div class="error">
+            <h3>Error</h3>
+            <p>${err.message}</p>
+          </div>
+        `;
+      }
+    });
+    
+    // Card lookup function
+    async function lookupCard() {
+      const tagHash = document.getElementById('lookup-tag').value.trim();
+      if (!tagHash) {
+        document.getElementById('card-details').innerHTML = '<p>Please enter a tag hash.</p>';
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/card/${tagHash}`);
+        
+        if (response.ok) {
+          const card = await response.json();
+          document.getElementById('card-details').innerHTML = `
+            <div class="card-info">
+              <p><strong>Owner:</strong> ${card.owner_name}</p>
+              <p><strong>Vehicle:</strong> ${card.vehicle_number}</p>
+              <p><strong>Type:</strong> ${card.vehicle_type}</p>
+              <p><strong>Balance:</strong> ₹${card.balance}</p>
+              <p><strong>Tariff Amount:</strong> ₹${card.tariff_amount}</p>
+            </div>
+          `;
+        } else {
+          document.getElementById('card-details').innerHTML = '<p>Card not found.</p>';
+        }
+      } catch (err) {
+        document.getElementById('card-details').innerHTML = `<p>Error: ${err.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html>

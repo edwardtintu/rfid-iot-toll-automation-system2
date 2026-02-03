@@ -1,8 +1,11 @@
 import json
+import os
 from web3 import Web3
 
-# Connect to Ganache
-ganache_url = "http://127.0.0.1:7545"
+# Connect to Ganache using environment variables
+BLOCKCHAIN_HOST = os.getenv("BLOCKCHAIN_HOST", "localhost")
+BLOCKCHAIN_PORT = os.getenv("BLOCKCHAIN_PORT", "7545")
+ganache_url = f"http://{BLOCKCHAIN_HOST}:{BLOCKCHAIN_PORT}"
 web3 = Web3(Web3.HTTPProvider(ganache_url))
 
 # Load contract information
@@ -17,10 +20,10 @@ def load_contract_info():
         print("[BLOCKCHAIN] Warning: Deployment info not found. Contract interaction disabled.")
         return None
 
-def send_to_chain(tx_hash, decision, reason, tagUID="N/A", vehicle_type="CAR", amount=0.0):
+def send_to_chain(tx_hash, decision, reason, tagUID="N/A", vehicle_type="CAR", amount=0.0, reader_id=None, timestamp=None):
     """
     Send toll transaction data to the blockchain.
-    
+
     Args:
         tx_hash: Transaction hash
         decision: Decision (allow/block)
@@ -28,6 +31,8 @@ def send_to_chain(tx_hash, decision, reason, tagUID="N/A", vehicle_type="CAR", a
         tagUID: RFID tag UID
         vehicle_type: Vehicle type
         amount: Toll amount
+        reader_id: Reader ID that authenticated the event
+        timestamp: Timestamp of the event
     """
     deployment_info = load_contract_info()
     
@@ -37,27 +42,35 @@ def send_to_chain(tx_hash, decision, reason, tagUID="N/A", vehicle_type="CAR", a
         return {"success": False, "error": "Blockchain not available", "fallback_used": True}
     
     try:
+        # Create verified event hash for blockchain anchoring
+        import hashlib
+
+        # The tagUID parameter now contains the verified event hash from the backend
+        # This ensures only verified events are stored on the blockchain
+        verified_event_hash = tagUID  # This is now the verified event hash, not the raw UID
+
         # Get the contract instance
         contract_address = deployment_info["contract_address"]
         contract_abi = deployment_info["contract_abi"]
-        
+
         toll_contract = web3.eth.contract(address=contract_address, abi=contract_abi)
-        
+
         # Get the account to send the transaction (first account in Ganache)
         accounts = web3.eth.accounts
         if not accounts:
             return {"success": False, "error": "No accounts available", "fallback_used": True}
-        
+
         sender_account = accounts[0]
-        
+
         # Prepare the transaction to call the smart contract
+        # Store only the verified event hash on blockchain for privacy and security
         transaction = toll_contract.functions.recordTollTransaction(
-            tagUID,
+            verified_event_hash,  # Store the verified event hash (not raw UID)
             vehicle_type,
             int(amount * 100),  # Convert to cents to avoid floating point issues
             decision,
             reason or "None",
-            tx_hash
+            tx_hash  # Original transaction hash for reference
         ).build_transaction({
             'from': sender_account,
             'nonce': web3.eth.get_transaction_count(sender_account),

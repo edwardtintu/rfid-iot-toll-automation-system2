@@ -1,9 +1,14 @@
 # backend/seed_db.py
+import hashlib
+import os
 from database import SessionLocal, Card, TollTariff, init_db
 from datetime import datetime
 
 def seed():
-    init_db()
+    # Only initialize tables if not using PostgreSQL (tables created separately)
+    if os.getenv("USE_POSTGRES", "false").lower() != "true":
+        init_db()
+
     db = SessionLocal()
 
     # ✅ 1. Add default tariffs
@@ -15,9 +20,9 @@ def seed():
     for vtype, amount in tariffs.items():
         if not db.query(TollTariff).filter_by(vehicle_type=vtype).first():
             db.add(TollTariff(vehicle_type=vtype, amount=amount))
-            print(f"✅ Added tariff for {vtype}: ₹{amount}")
+            print(f"Added tariff for {vtype}: Rs.{amount}")
 
-    # ✅ 2. Add RFID Card details
+    # 2. Add RFID Card details
     card_data = [
         {
             "tagUID": "5B88F75",
@@ -50,21 +55,32 @@ def seed():
     ]
 
     for c in card_data:
-        existing_card = db.query(Card).filter_by(tagUID=c["tagUID"]).first()
+        # Hash the UID for storage
+        tag_hash = hashlib.sha256(c["tagUID"].encode()).hexdigest()
+
+        existing_card = db.query(Card).filter_by(tag_hash=tag_hash).first()
         if not existing_card:
-            db.add(Card(**c))
-            print(f"✅ Added card for {c['owner_name']} ({c['tagUID']})")
+            # Create new card with hashed UID
+            new_card = Card(
+                tag_hash=tag_hash,
+                owner_name=c["owner_name"],
+                vehicle_number=c["vehicle_number"],
+                vehicle_type=c["vehicle_type"],
+                balance=c["balance"]
+            )
+            db.add(new_card)
+            print(f"✅ Added card for {c['owner_name']} (Original UID: {c['tagUID']}, Hash: {tag_hash[:10]}...)")
         else:
             # Update existing card with new values (especially balance)
             existing_card.owner_name = c["owner_name"]
             existing_card.vehicle_number = c["vehicle_number"]
             existing_card.vehicle_type = c["vehicle_type"]
             existing_card.balance = c["balance"]
-            print(f"ℹ️ Card {c['tagUID']} already exists. Balance updated to ₹{c['balance']}.")
+            print(f"Card with original UID {c['tagUID']} already exists. Balance updated to Rs.{c['balance']}.")
 
     db.commit()
     db.close()
-    print("✅ Database seeding completed!")
+    print("Database seeding completed!")
 
 if __name__ == "__main__":
     seed()

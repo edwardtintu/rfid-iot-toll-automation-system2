@@ -1,0 +1,76 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:14
+    container_name: htms-db
+    environment:
+      POSTGRES_DB: htms
+      POSTGRES_USER: htms_user
+      POSTGRES_PASSWORD: htms_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  db-init:
+    build: ./backend
+    container_name: htms-db-init
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: htms
+      DB_USER: htms_user
+      DB_PASSWORD: htms_pass
+      USE_POSTGRES: "true"
+    command: python db_init.py
+    volumes:
+      - ./backend:/app
+
+  db-seed:
+    build: ./backend
+    container_name: htms-db-seed
+    depends_on:
+      - db-init
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: htms
+      DB_USER: htms_user
+      DB_PASSWORD: htms_pass
+      USE_POSTGRES: "true"
+    command: python seed_db.py
+    volumes:
+      - ./backend:/app
+
+  backend:
+    build: ./backend
+    container_name: htms-backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - db-init
+      - db-seed
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: htms
+      DB_USER: htms_user
+      DB_PASSWORD: htms_pass
+      BLOCKCHAIN_HOST: blockchain
+      BLOCKCHAIN_PORT: 8545
+      USE_POSTGRES: "true"
+    volumes:
+      - ./backend:/app
+
+  blockchain:
+    image: trufflesuite/ganache
+    container_name: htms-blockchain
+    ports:
+      - "8545:8545"
+
+volumes:
+  postgres_data:

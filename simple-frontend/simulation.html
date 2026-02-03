@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTMS – Simulation & Test Console</title>
+    <style>
+        /* Base styles */
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Roboto, Arial, sans-serif;
+            background-color: #f4f6f8;
+            color: #2c2c2c;
+        }
+
+        h1, h2 {
+            margin: 0 0 10px 0;
+            font-weight: 600;
+        }
+
+        p {
+            margin: 0;
+            color: #555;
+        }
+
+        label {
+            font-size: 13px;
+            color: #666;
+            margin-top: 10px;
+            display: block;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 8px 10px;
+            margin-top: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        /* Header */
+        .sim-header, .header {
+            background: #ffffff;
+            padding: 20px 30px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .sim-header h1 {
+            font-size: 22px;
+        }
+
+        .sim-header p {
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        /* Layout containers */
+        .sim-container {
+            padding: 25px;
+        }
+
+        .sim-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .full-width {
+            width: 100%;
+        }
+
+        /* Cards */
+        .sim-card {
+            background: #ffffff;
+            border-radius: 6px;
+            padding: 20px;
+            flex: 1;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        }
+
+        .sim-card h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+
+        /* Buttons */
+        button {
+            margin-top: 15px;
+            padding: 10px 14px;
+            border: none;
+            border-radius: 4px;
+            background-color: #2d6cdf;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        button.secondary {
+            background-color: #6c757d;
+            margin-left: 10px;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        /* Response panel */
+        .response-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            row-gap: 10px;
+            column-gap: 20px;
+            font-size: 14px;
+        }
+
+        .response-grid span {
+            font-weight: 600;
+        }
+
+        /* Status colors */
+        .status-active {
+            color: #1f9d55;
+            font-weight: 600;
+        }
+
+        .status-warning {
+            color: #d39e00;
+            font-weight: 600;
+        }
+
+        .status-error {
+            color: #c82333;
+            font-weight: 600;
+        }
+
+        /* Tables (Audit Ledger) */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        /* Footer */
+        .sim-footer {
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+            padding: 15px;
+        }
+
+        /* Button group */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .button-group button {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="sim-header">
+        <h1>HTMS – Simulation & Test Console</h1>
+        <p>Controlled Environment for Toll, Security, and Resilience Testing</p>
+    </div>
+
+    <div class="sim-container">
+        <div class="sim-row">
+            <div class="sim-card" id="toll-simulator">
+                <h2>Toll Event Simulator</h2>
+
+                <label>Reader ID</label>
+                <select id="readerId">
+                    <option>TOLL_READER_01</option>
+                    <option>TOLL_READER_02</option>
+                </select>
+
+                <label>Vehicle UID</label>
+                <input type="text" id="vehicleUid" placeholder="Enter RFID UID" value="9C981B6">
+
+                <label>Vehicle Type</label>
+                <select id="vehicleType">
+                    <option>Car</option>
+                    <option>Truck</option>
+                    <option>Bus</option>
+                </select>
+
+                <label>Toll Plaza</label>
+                <select id="plaza">
+                    <option>Plaza_01</option>
+                    <option>Plaza_02</option>
+                </select>
+
+                <div class="button-group">
+                    <button id="submitToll">Submit Toll Event</button>
+                    <button class="secondary" id="resetBtn">Reset</button>
+                </div>
+            </div>
+
+            <div class="sim-card" id="security-tests">
+                <h2>Security Test Scenarios</h2>
+                <p>Simulate malicious or invalid events</p>
+
+                <button id="replayEvent">Replay Last Toll Event</button>
+                <button id="fakeReader">Send Event from Unauthorized Reader</button>
+                <button id="duplicateUid">Duplicate UID Scan</button>
+                <button id="simulateSuspiciousBehavior">Simulate Suspicious Reader Behavior</button>
+            </div>
+        </div>
+
+        <div class="sim-row">
+            <div class="sim-card full-width" id="violation-simulator">
+                <h2>Traffic Violation Simulator</h2>
+
+                <label>Vehicle Number</label>
+                <input type="text" id="vehicleNumber" placeholder="TN09AB1234" value="TN09AB1234">
+
+                <label>Violation Type</label>
+                <select id="violationType">
+                    <option>Overspeeding</option>
+                    <option>Signal Jump</option>
+                    <option>Wrong Lane</option>
+                </select>
+
+                <label>Detected Speed (km/h)</label>
+                <input type="number" id="speed" placeholder="110" value="110">
+
+                <label>Fine Amount (₹)</label>
+                <input type="number" id="fine" placeholder="1000" value="1000">
+
+                <button id="registerViolation">Register Violation</button>
+            </div>
+        </div>
+
+        <div class="sim-row">
+            <div class="sim-card full-width" id="system-response">
+                <h2>System Response</h2>
+
+                <div class="response-grid">
+                    <div><strong>Event ID:</strong> <span id="respEventId">—</span></div>
+                    <div><strong>Decision:</strong> <span id="respDecision">—</span></div>
+                    <div><strong>Reason:</strong> <span id="respReason">—</span></div>
+                    <div><strong>Toll Amount:</strong> <span id="respAmount">—</span></div>
+                    <div><strong>Additional Fine:</strong> <span id="respFine">—</span></div>
+                    <div><strong>Ledger Action:</strong> <span id="respLedger">—</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sim-footer">
+        <p>Simulation Console – HTMS | <a href="reader_trust.html" style="color: #2d6cdf; text-decoration: none;">Reader Trust Dashboard</a> | Academic Evaluation Use</p>
+    </div>
+
+    <script>
+        const API_BASE = "http://127.0.0.1:8000";
+
+        // Toll Event Simulator
+        document.getElementById("submitToll").addEventListener("click", async () => {
+            const payload = {
+                reader_id: document.getElementById("readerId").value,
+                tagUID: document.getElementById("vehicleUid").value,
+                vehicle_type: document.getElementById("vehicleType").value,
+                plaza_id: document.getElementById("plaza").value
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/api/toll`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                updateSystemResponse(data);
+            } catch (error) {
+                console.error("Error submitting toll event:", error);
+                updateSystemResponse({ error: "Network error - check backend connection" });
+            }
+        });
+
+        // Security Test Buttons
+        document.getElementById("replayEvent").addEventListener("click", async () => {
+            const payload = {
+                reader_id: "TOLL_READER_01",
+                tagUID: "9C981B6",
+                timestamp: Date.now() - 1000  // slightly different timestamp to test replay
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/api/toll`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                updateSystemResponse(data);
+            } catch (error) {
+                console.error("Error testing replay:", error);
+                updateSystemResponse({ error: "Network error - check backend connection" });
+            }
+        });
+
+        document.getElementById("fakeReader").addEventListener("click", async () => {
+            const payload = {
+                reader_id: "FAKE_READER_99",
+                tagUID: "9C981B6"
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/api/toll`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                updateSystemResponse(data);
+            } catch (error) {
+                console.error("Error testing fake reader:", error);
+                updateSystemResponse({ error: "Network error - check backend connection" });
+            }
+        });
+
+        document.getElementById("duplicateUid").addEventListener("click", async () => {
+            const payload = {
+                reader_id: "TOLL_READER_01",
+                tagUID: "DUPLICATE_UID_TEST"
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/api/toll`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                updateSystemResponse(data);
+            } catch (error) {
+                console.error("Error testing duplicate UID:", error);
+                updateSystemResponse({ error: "Network error - check backend connection" });
+            }
+        });
+
+        document.getElementById("simulateSuspiciousBehavior").addEventListener("click", async () => {
+            // Simulate multiple violations to decrease trust score
+            const readerId = "TOLL_READER_01";
+
+            // First, try to send multiple rapid requests to trigger rate limiting
+            for (let i = 0; i < 6; i++) {
+                const payload = {
+                    reader_id: readerId,
+                    tagUID: `TEST_UID_${Date.now()}_${i}`,
+                    timestamp: Date.now().toString(),
+                    nonce: `nonce_${Date.now()}_${i}`,
+                    signature: "fake_signature_for_testing",
+                    key_version: "1"
+                };
+
+                try {
+                    const res = await fetch(`${API_BASE}/api/toll`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await res.json();
+                    console.log(`Attempt ${i+1}:`, data);
+                } catch (error) {
+                    console.error(`Error in attempt ${i+1}:`, error);
+                }
+
+                // Small delay between requests
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Update system response to show trust status
+            try {
+                const trustRes = await fetch(`${API_BASE}/api/reader/trust/${readerId}`);
+                const trustData = await trustRes.json();
+
+                updateSystemResponse({
+                    message: "Suspicious behavior simulation completed",
+                    trust_info: trustData
+                });
+            } catch (error) {
+                console.error("Error fetching trust status:", error);
+            }
+        });
+
+        // Violation Simulator
+        document.getElementById("registerViolation").addEventListener("click", async () => {
+            const payload = {
+                vehicle_number: document.getElementById("vehicleNumber").value,
+                violation_type: document.getElementById("violationType").value,
+                speed: document.getElementById("speed").value,
+                fine: document.getElementById("fine").value
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/api/violation`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                alert("Violation Registered Successfully");
+            } catch (error) {
+                console.error("Error registering violation:", error);
+                alert("Error registering violation - check backend connection");
+            }
+        });
+
+        // Reset button
+        document.getElementById("resetBtn").addEventListener("click", () => {
+            document.getElementById("vehicleUid").value = "";
+            document.getElementById("vehicleNumber").value = "";
+            document.getElementById("speed").value = "";
+            document.getElementById("fine").value = "";
+            updateSystemResponse({});
+        });
+
+        // Update system response display
+        function updateSystemResponse(data) {
+            document.getElementById("respEventId").innerText = data.event_id || data.tx_hash || "—";
+            document.getElementById("respDecision").innerText = data.action || data.decision || "—";
+            document.getElementById("respReason").innerText = data.reason || "—";
+            document.getElementById("respAmount").innerText = data.amount || "—";
+            document.getElementById("respFine").innerText = data.fine || "0";
+            document.getElementById("respLedger").innerText = data.ledger_status || data.blockchain_status || "—";
+        }
+    </script>
+</body>
+</html>
