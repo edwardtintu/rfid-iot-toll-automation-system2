@@ -1100,10 +1100,11 @@ def simulate_toll():
         )
 
         # Also create a toll event record in the database
+        import uuid
         from database import TollEvent
         import time
         toll_event = TollEvent(
-            event_id=event.get("event_id", "simulated")[:16],
+            event_id=str(uuid.uuid4())[:16],  # Generate unique event ID
             tag_hash=event["tag_hash"],
             reader_id=event["reader_id"],
             timestamp=int(time.time()),
@@ -1176,9 +1177,10 @@ def auto_simulator():
                 }
 
             # Log the decision telemetry
+            import uuid
             from decision_logger import log_decision
             log_decision(
-                event_id=event.get("event_id", "simulated"),
+                event_id=str(uuid.uuid4()),  # Generate unique event ID
                 reader_id=event["reader_id"],
                 trust_score=trust_score,
                 reader_status=trust_status,
@@ -1188,6 +1190,20 @@ def auto_simulator():
                 ml_b=result["ml_scores"]["modelB_prob"],
                 anomaly=result["ml_scores"]["iso_flag"]
             )
+
+            # Also create a toll event record in the database
+            from database import TollEvent
+            import time
+            toll_event = TollEvent(
+                event_id=str(uuid.uuid4())[:16],  # Generate unique event ID
+                tag_hash=event["tag_hash"],
+                reader_id=event["reader_id"],
+                timestamp=int(time.time()),
+                nonce=event["nonce"],
+                decision=result["action"]
+            )
+            db.add(toll_event)
+            db.commit()
 
             db.close()
         except Exception as e:
