@@ -883,6 +883,56 @@ def blockchain_audit():
     finally:
         db.close()
 
+@app.post("/admin/register-readers")
+def register_readers():
+    from database import SessionLocal, Reader, ReaderTrust
+    db = SessionLocal()
+    try:
+        from sqlalchemy.exc import IntegrityError
+
+        # Create demo readers
+        demo_readers = [
+            {"reader_id": "RDR-001", "status": "ACTIVE"},
+            {"reader_id": "RDR-002", "status": "ACTIVE"},
+            {"reader_id": "RDR-003", "status": "ACTIVE"}
+        ]
+
+        for reader_data in demo_readers:
+            try:
+                reader = Reader(
+                    reader_id=reader_data["reader_id"],
+                    secret="demo_secret",
+                    key_version=1,
+                    status=reader_data["status"]
+                )
+                db.add(reader)
+                db.commit()
+            except IntegrityError:
+                db.rollback()  # Ignore if already exists
+
+        # Create demo trust records
+        demo_trust_records = [
+            {"reader_id": "RDR-001", "trust_score": 100, "trust_status": "TRUSTED"},
+            {"reader_id": "RDR-002", "trust_score": 75, "trust_status": "TRUSTED"},
+            {"reader_id": "RDR-003", "trust_score": 45, "trust_status": "DEGRADED"}
+        ]
+
+        for trust_data in demo_trust_records:
+            try:
+                trust = ReaderTrust(
+                    reader_id=trust_data["reader_id"],
+                    trust_score=trust_data["trust_score"],
+                    trust_status=trust_data["trust_status"]
+                )
+                db.add(trust)
+                db.commit()
+            except IntegrityError:
+                db.rollback()  # Ignore if already exists
+
+        return {"status": "Readers registered"}
+    finally:
+        db.close()
+
 @app.post("/admin/seed")
 def seed_cloud_db():
     from database import SessionLocal, Reader, ReaderTrust
