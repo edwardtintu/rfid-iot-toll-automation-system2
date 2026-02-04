@@ -1099,6 +1099,20 @@ def simulate_toll():
             anomaly=result["ml_scores"]["iso_flag"]
         )
 
+        # Also create a toll event record in the database
+        from database import TollEvent
+        import time
+        toll_event = TollEvent(
+            event_id=event.get("event_id", "simulated")[:16],
+            tag_hash=event["tag_hash"],
+            reader_id=event["reader_id"],
+            timestamp=int(time.time()),
+            nonce=event["nonce"],
+            decision=result["action"]
+        )
+        db.add(toll_event)
+        db.commit()
+
         db.close()
         return {
             "status": "Simulated toll processed",
