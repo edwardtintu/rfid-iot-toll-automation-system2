@@ -861,6 +861,15 @@ def get_decisions():
     finally:
         db.close()
 
+@app.get("/system/status")
+def system_status():
+    return {
+        "backend": "UP",
+        "database": "CONNECTED",
+        "blockchain": "SYNCED",
+        "simulation_mode": True
+    }
+
 @app.get("/transactions/recent")
 def recent_transactions():
     from database import SessionLocal, TollEvent

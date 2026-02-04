@@ -24,8 +24,26 @@ async function loadDashboard() {
 
 // Load additional data
 async function loadAdditionalData() {
+  // Load system status
   try {
-    // Load reader trust status
+    const response = await fetch(`${API_BASE_URL}/system/status`);
+    if (response.ok) {
+      const data = await response.json();
+      document.getElementById("system-info").innerHTML = `
+        Backend: ${data.backend}<br/>
+        Database: ${data.database}<br/>
+        Blockchain: ${data.blockchain}<br/>
+        Simulation Mode: ${data.simulation_mode}
+      `;
+    } else {
+      document.getElementById("system-info").innerHTML = "<p>Error loading system status.</p>";
+    }
+  } catch (err) {
+    document.getElementById("system-info").innerHTML = `<p>Error: ${err.message}</p>`;
+  }
+
+  // Load reader trust status
+  try {
     const response = await fetch(`${API_BASE_URL}/api/readers/trust`);
     if (response.ok) {
       const readers = await response.json();
