@@ -791,11 +791,11 @@ def get_summary_stats():
         # Blocked events
         blocked = db.query(TollEvent).filter(TollEvent.decision == "block").count()
 
-        # Active readers
-        active_readers = db.query(Reader).filter(Reader.status == "ACTIVE").count()
+        # Active readers (TRUSTED and DEGRADED readers)
+        active_readers = db.query(ReaderTrust).filter(ReaderTrust.trust_status.in_(["TRUSTED", "DEGRADED"])).count()
 
         # Suspended readers
-        suspended_readers = db.query(Reader).filter(Reader.status == "SUSPENDED").count()
+        suspended_readers = db.query(ReaderTrust).filter(ReaderTrust.trust_status == "SUSPENDED").count()
 
         # Pending blockchain events
         pending_chain = db.query(BlockchainQueue).filter(BlockchainQueue.status == "PENDING").count()
