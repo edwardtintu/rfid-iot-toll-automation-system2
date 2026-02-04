@@ -861,6 +861,28 @@ def get_decisions():
     finally:
         db.close()
 
+@app.get("/transactions/recent")
+def recent_transactions():
+    from database import SessionLocal, TollEvent
+    from sqlalchemy import desc
+    db = SessionLocal()
+    try:
+        # Query the most recent 10 transactions ordered by timestamp descending
+        recent_events = db.query(TollEvent).order_by(desc(TollEvent.timestamp)).limit(10).all()
+
+        result = []
+        for event in recent_events:
+            result.append({
+                "event_id": event.event_id,
+                "reader_id": event.reader_id,
+                "decision": event.decision,
+                "timestamp": event.timestamp
+            })
+
+        return result
+    finally:
+        db.close()
+
 @app.get("/blockchain/audit")
 def blockchain_audit():
     from database import SessionLocal, BlockchainQueue

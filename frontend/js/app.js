@@ -60,37 +60,30 @@ async function loadAdditionalData() {
 
   // Load recent transactions
   try {
-    // Since we don't have a specific API endpoint for recent transactions,
-    // we'll simulate this with a placeholder for now
-    const response = await fetch(`${API_BASE_URL}/api/toll_records?limit=5`);
-
-    let html = '<div class="transactions-list">';
+    const response = await fetch(`${API_BASE_URL}/transactions/recent`);
 
     if (response.ok) {
-      const records = await response.json();
+      const data = await response.json();
+      let html = '<div class="transactions-list">';
 
-      if (records.length === 0) {
+      if (data.length === 0) {
         html += "<p>No recent transactions.</p>";
       } else {
-        records.forEach(record => {
+        data.forEach(tx => {
           html += `
             <div class="transaction-item">
-              <strong>${record.tagUID || record.tag_hash || 'N/A'}</strong><br>
-              <span>Amount: ₹${record.amount || 'N/A'}</span><br>
-              <span>Decision: ${record.decision || 'N/A'}</span><br>
-              <small>${record.timestamp || 'N/A'}</small>
+              <strong>${tx.reader_id}</strong> → ${tx.decision}<br>
+              <small>${tx.timestamp}</small>
             </div>
           `;
         });
       }
-    } else {
-      // If the endpoint doesn't exist, show a message
-      html += "<p>Recent transactions endpoint not available yet.</p>";
-      html += "<p>Backend is functional and ready to receive toll transactions.</p>";
-    }
 
-    html += '</div>';
-    document.getElementById("recent-transactions").innerHTML = html;
+      html += '</div>';
+      document.getElementById("recent-transactions").innerHTML = html;
+    } else {
+      document.getElementById("recent-transactions").innerHTML = "<p>Error loading recent transactions.</p>";
+    }
   } catch (err) {
     document.getElementById("recent-transactions").innerHTML = `<p>Error: ${err.message}</p>`;
   }
