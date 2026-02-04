@@ -1101,7 +1101,7 @@ def simulate_toll():
 
         # Also create a toll event record in the database
         import uuid
-        from database import TollEvent
+        from database import TollEvent, ReaderTrust
         import time
         toll_event = TollEvent(
             event_id=str(uuid.uuid4())[:16],  # Generate unique event ID
@@ -1112,6 +1112,25 @@ def simulate_toll():
             decision=result["action"]
         )
         db.add(toll_event)
+
+        # Update reader trust based on the transaction
+        reader_trust = db.query(ReaderTrust).filter(ReaderTrust.reader_id == event["reader_id"]).first()
+        if reader_trust:
+            # Simple trust decay for demo - decrease trust slightly with each transaction
+            trust_score = max(0, reader_trust.trust_score - 2)  # Decrease by 2 points per transaction
+
+            # Update status based on new trust score
+            if trust_score <= 40:
+                status = "SUSPENDED"
+            elif trust_score <= 70:
+                status = "DEGRADED"
+            else:
+                status = "TRUSTED"
+
+            reader_trust.trust_score = trust_score
+            reader_trust.trust_status = status
+            reader_trust.last_updated = datetime.utcnow()
+
         db.commit()
 
         db.close()
@@ -1192,7 +1211,7 @@ def auto_simulator():
             )
 
             # Also create a toll event record in the database
-            from database import TollEvent
+            from database import TollEvent, ReaderTrust
             import time
             toll_event = TollEvent(
                 event_id=str(uuid.uuid4())[:16],  # Generate unique event ID
@@ -1203,6 +1222,25 @@ def auto_simulator():
                 decision=result["action"]
             )
             db.add(toll_event)
+
+            # Update reader trust based on the transaction
+            reader_trust = db.query(ReaderTrust).filter(ReaderTrust.reader_id == event["reader_id"]).first()
+            if reader_trust:
+                # Simple trust decay for demo - decrease trust slightly with each transaction
+                trust_score = max(0, reader_trust.trust_score - 2)  # Decrease by 2 points per transaction
+
+                # Update status based on new trust score
+                if trust_score <= 40:
+                    status = "SUSPENDED"
+                elif trust_score <= 70:
+                    status = "DEGRADED"
+                else:
+                    status = "TRUSTED"
+
+                reader_trust.trust_score = trust_score
+                reader_trust.trust_status = status
+                reader_trust.last_updated = datetime.utcnow()
+
             db.commit()
 
             db.close()
