@@ -275,7 +275,18 @@ import os
 if os.getenv("USE_POSTGRES", "false").lower() != "true":
     init_db()
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Hybrid Toll Management System")
+
+# Add CORS middleware to allow frontend requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify exact origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 import os
 LOG_FILE = "/app/storage/toll_logs.txt"  # Docker-friendly path
