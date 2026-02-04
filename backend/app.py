@@ -275,7 +275,11 @@ import os
 if os.getenv("USE_POSTGRES", "false").lower() != "true":
     init_db()
 
+import os
 from fastapi.middleware.cors import CORSMiddleware
+
+# Simulation mode flag
+SIMULATION_MODE = os.getenv("SIMULATION_MODE", "true").lower() == "true"
 
 app = FastAPI(title="Hybrid Toll Management System")
 
@@ -878,6 +882,259 @@ def blockchain_audit():
         return result
     finally:
         db.close()
+
+@app.post("/admin/seed")
+def seed_cloud_db():
+    from database import SessionLocal, Reader, ReaderTrust
+    db = SessionLocal()
+    try:
+        # Insert demo readers with trust records
+        from sqlalchemy.exc import IntegrityError
+
+        # Create demo readers
+        demo_readers = [
+            {"reader_id": "RDR-001", "status": "ACTIVE"},
+            {"reader_id": "RDR-002", "status": "ACTIVE"},
+            {"reader_id": "RDR-003", "status": "ACTIVE"}
+        ]
+
+        for reader_data in demo_readers:
+            try:
+                reader = Reader(
+                    reader_id=reader_data["reader_id"],
+                    secret="demo_secret",
+                    key_version=1,
+                    status=reader_data["status"]
+                )
+                db.add(reader)
+                db.commit()
+            except IntegrityError:
+                db.rollback()  # Ignore if already exists
+
+        # Create demo trust records
+        demo_trust_records = [
+            {"reader_id": "RDR-001", "trust_score": 95, "trust_status": "TRUSTED"},
+            {"reader_id": "RDR-002", "trust_score": 60, "trust_status": "DEGRADED"},
+            {"reader_id": "RDR-003", "trust_score": 30, "trust_status": "SUSPENDED"}
+        ]
+
+        for trust_data in demo_trust_records:
+            try:
+                trust = ReaderTrust(
+                    reader_id=trust_data["reader_id"],
+                    trust_score=trust_data["trust_score"],
+                    trust_status=trust_data["trust_status"]
+                )
+                db.add(trust)
+                db.commit()
+            except IntegrityError:
+                db.rollback()  # Ignore if already exists
+
+        return {"status": "Seed data inserted"}
+    finally:
+        db.close()
+
+@app.post("/admin/mock-event")
+def mock_event():
+    from database import SessionLocal, DecisionTelemetry, TollEvent
+    from datetime import datetime
+    import random
+    db = SessionLocal()
+    try:
+        # Create a mock decision telemetry record
+        mock_decision = DecisionTelemetry(
+            event_id=f"EVT-{random.randint(1000, 9999)}",
+            reader_id=random.choice(["RDR-001", "RDR-002", "RDR-003"]),
+            trust_score=random.randint(30, 100),
+            reader_status=random.choice(["TRUSTED", "DEGRADED", "SUSPENDED"]),
+            decision=random.choice(["allow", "block"]),
+            reason="Demo transaction",
+            ml_score_a=round(random.uniform(0.1, 0.9), 3),
+            ml_score_b=round(random.uniform(0.1, 0.9), 3),
+            anomaly_flag=random.choice([0, 1])
+        )
+        db.add(mock_decision)
+        db.commit()
+
+        # Create a mock toll event
+        mock_event = TollEvent(
+            event_id=mock_decision.event_id,
+            tag_hash=f"TAG-{random.randint(10000, 99999)}",
+            reader_id=mock_decision.reader_id,
+            timestamp=int(datetime.utcnow().timestamp()),
+            nonce=str(random.randint(100000, 999999)),
+            decision=mock_decision.decision
+        )
+        db.add(mock_event)
+        db.commit()
+
+        return {"status": "Mock event created", "event_id": mock_decision.event_id}
+    finally:
+        db.close()
+
+@app.post("/simulate/toll")
+def simulate_toll():
+    if not SIMULATION_MODE:
+        return {"error": "Simulation disabled"}
+
+    from simulator import generate_toll_event, generate_signature
+
+    event = generate_toll_event()
+    event["signature"] = generate_signature(event)
+
+    # Process the event through the same pipeline as real hardware
+    from fastapi import Request
+    import json
+    from starlette.datastructures import UploadFile
+    from io import BytesIO
+
+    # Simulate the same processing as the /api/toll endpoint
+    # We'll call the toll processing logic directly
+    try:
+        # This mimics the exact same processing as the real API
+        from database import SessionLocal
+        db = SessionLocal()
+
+        # Verify reader trust status
+        is_trusted, trust_status, trust_score = evaluate_reader_trust(event["reader_id"], db)
+
+        if not is_trusted:
+            # Reader is suspended, block the transaction immediately
+            result = {
+                "flagged": True,
+                "action": "block",
+                "reasons": [f"Reader suspended due to low trust score ({trust_score})"],
+                "ml_scores": {
+                    "modelA_prob": 0.0,
+                    "modelB_prob": 0.0,
+                    "iso_flag": 0
+                },
+                "trust_info": {
+                    "reader_id": event["reader_id"],
+                    "trust_score": trust_score,
+                    "trust_status": trust_status
+                }
+            }
+            db.close()
+            return result
+
+        # For simulation, we'll just return a success response
+        # In a real scenario, this would go through the full processing pipeline
+        result = {
+            "action": "allow",
+            "reasons": ["Valid simulation event"],
+            "ml_scores": {
+                "modelA_prob": round(0.1 + (trust_score / 1000), 3),
+                "modelB_prob": round(0.15 + (trust_score / 800), 3),
+                "iso_flag": 0
+            },
+            "trust_info": {
+                "reader_id": event["reader_id"],
+                "trust_score": trust_score,
+                "trust_status": trust_status
+            }
+        }
+
+        # Log the decision telemetry
+        from decision_logger import log_decision
+        log_decision(
+            event_id=event.get("event_id", "simulated"),
+            reader_id=event["reader_id"],
+            trust_score=trust_score,
+            reader_status=trust_status,
+            decision=result["action"],
+            reason=", ".join(result["reasons"]) if isinstance(result["reasons"], list) else result["reasons"],
+            ml_a=result["ml_scores"]["modelA_prob"],
+            ml_b=result["ml_scores"]["modelB_prob"],
+            anomaly=result["ml_scores"]["iso_flag"]
+        )
+
+        db.close()
+        return {
+            "status": "Simulated toll processed",
+            "event": event,
+            "result": result
+        }
+    except Exception as e:
+        return {"error": f"Error processing simulation: {str(e)}"}
+
+# Background task for auto-simulation
+import threading
+import time
+
+def auto_simulator():
+    while SIMULATION_MODE:
+        try:
+            # Process a simulated toll event
+            from simulator import generate_toll_event, generate_signature
+            event = generate_toll_event()
+            event["signature"] = generate_signature(event)
+
+            # Process the event through the same pipeline as real hardware
+            from database import SessionLocal
+            db = SessionLocal()
+
+            # Verify reader trust status
+            is_trusted, trust_status, trust_score = evaluate_reader_trust(event["reader_id"], db)
+
+            if not is_trusted:
+                # Reader is suspended, block the transaction immediately
+                result = {
+                    "flagged": True,
+                    "action": "block",
+                    "reasons": [f"Reader suspended due to low trust score ({trust_score})"],
+                    "ml_scores": {
+                        "modelA_prob": 0.0,
+                        "modelB_prob": 0.0,
+                        "iso_flag": 0
+                    },
+                    "trust_info": {
+                        "reader_id": event["reader_id"],
+                        "trust_score": trust_score,
+                        "trust_status": trust_status
+                    }
+                }
+            else:
+                # For simulation, we'll just return a success response
+                result = {
+                    "action": "allow",
+                    "reasons": ["Valid simulation event"],
+                    "ml_scores": {
+                        "modelA_prob": round(0.1 + (trust_score / 1000), 3),
+                        "modelB_prob": round(0.15 + (trust_score / 800), 3),
+                        "iso_flag": 0
+                    },
+                    "trust_info": {
+                        "reader_id": event["reader_id"],
+                        "trust_score": trust_score,
+                        "trust_status": trust_status
+                    }
+                }
+
+            # Log the decision telemetry
+            from decision_logger import log_decision
+            log_decision(
+                event_id=event.get("event_id", "simulated"),
+                reader_id=event["reader_id"],
+                trust_score=trust_score,
+                reader_status=trust_status,
+                decision=result["action"],
+                reason=", ".join(result["reasons"]) if isinstance(result["reasons"], list) else result["reasons"],
+                ml_a=result["ml_scores"]["modelA_prob"],
+                ml_b=result["ml_scores"]["modelB_prob"],
+                anomaly=result["ml_scores"]["iso_flag"]
+            )
+
+            db.close()
+        except Exception as e:
+            print(f"Error in auto-simulator: {e}")
+
+        time.sleep(5)  # Generate event every 5 seconds
+
+# Start the auto-simulator in a background thread
+if SIMULATION_MODE:
+    simulator_thread = threading.Thread(target=auto_simulator, daemon=True)
+    simulator_thread.start()
 
 @app.post("/api/events/sync")
 def sync_events():
