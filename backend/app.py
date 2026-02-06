@@ -823,11 +823,13 @@ def get_readers():
         for reader, trust in readers_with_trust:
             trust_score = trust.trust_score if trust else 100  # Default to 100 if no trust record
             status = trust.trust_status if trust else "TRUSTED"  # Default to TRUSTED if no trust record
+            last_updated = trust.last_updated.isoformat() if trust and trust.last_updated else None
 
             result.append({
                 "reader_id": reader.reader_id,
                 "trust_score": trust_score,
-                "status": status
+                "status": status,
+                "last_updated": last_updated
             })
 
         return result

@@ -20,6 +20,7 @@ async function loadReaders() {
           </div>
         </td>
         <td class="status-${r.status}">${r.status}</td>
+        <td>${r.last_updated || 'N/A'}</td>
       `;
 
       tbody.appendChild(row);
