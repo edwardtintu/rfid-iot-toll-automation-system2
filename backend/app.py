@@ -916,52 +916,294 @@ def blockchain_audit():
     finally:
         db.close()
 
+@app.post("/admin/seed")
+def seed_data():
+    from database import SessionLocal, Reader, ReaderTrust, TollEvent, DecisionTelemetry, BlockchainQueue
+    from datetime import datetime
+    import random
+    import uuid
+    db = SessionLocal()
+    try:
+        from sqlalchemy.exc import IntegrityError
+        
+        # Create demo readers if they don't exist
+        demo_readers = [
+            {"reader_id": "RDR-001", "status": "ACTIVE"},
+            {"reader_id": "RDR-002", "status": "ACTIVE"},
+            {"reader_id": "RDR-003", "status": "ACTIVE"}
+        ]
+        
+        for reader_data in demo_readers:
+            try:
+                # Check if reader already exists
+                existing_reader = db.query(Reader).filter(Reader.reader_id == reader_data["reader_id"]).first()
+                if not existing_reader:
+                    reader = Reader(
+                        reader_id=reader_data["reader_id"],
+                        secret="demo_secret",
+                        key_version=1,
+                        status=reader_data["status"]
+                    )
+                    db.add(reader)
+                    db.commit()
+            except IntegrityError:
+                db.rollback()  # Ignore if already exists
+        
+        # Create or update demo trust records
+        demo_trust_records = [
+            {"reader_id": "RDR-001", "trust_score": 100, "trust_status": "TRUSTED"},
+            {"reader_id": "RDR-002", "trust_score": 75, "trust_status": "TRUSTED"},
+            {"reader_id": "RDR-003", "trust_score": 45, "trust_status": "DEGRADED"}
+        ]
+        
+        for trust_data in demo_trust_records:
+            try:
+                # Check if trust record exists, if so update it, otherwise create new
+                existing_trust = db.query(ReaderTrust).filter(ReaderTrust.reader_id == trust_data["reader_id"]).first()
+                if existing_trust:
+                    existing_trust.trust_score = trust_data["trust_score"]
+                    existing_trust.trust_status = trust_data["trust_status"]
+                else:
+                    trust = ReaderTrust(
+                        reader_id=trust_data["reader_id"],
+                        trust_score=trust_data["trust_score"],
+                        trust_status=trust_data["trust_status"]
+                    )
+                    db.add(trust)
+                db.commit()
+            except IntegrityError:
+                db.rollback()  # Ignore if already exists
+        
+        # Create demo toll events
+        for i in range(10):
+            demo_event = TollEvent(
+                event_id=f"EV{i:03d}",
+                tag_hash=f"TAG{i:04d}",
+                reader_id=random.choice(["RDR-001", "RDR-002", "RDR-003"]),
+                timestamp=int(datetime.utcnow().timestamp()),
+                nonce=str(uuid.uuid4())[:8],
+                decision=random.choice(["allow", "block"])
+            )
+            db.add(demo_event)
+        
+        # Create demo decision telemetry
+        for i in range(10):
+            demo_decision = DecisionTelemetry(
+                event_id=f"D{i:03d}",
+                reader_id=random.choice(["RDR-001", "RDR-002", "RDR-003"]),
+                trust_score=random.randint(30, 100),
+                reader_status=random.choice(["TRUSTED", "DEGRADED", "SUSPENDED"]),
+                decision=random.choice(["allow", "block"]),
+                reason="Demo transaction",
+                ml_score_a=round(random.uniform(0.1, 0.9), 3),
+                ml_score_b=round(random.uniform(0.1, 0.9), 3),
+                anomaly_flag=random.choice([0, 1])
+            )
+            db.add(demo_decision)
+        
+        # Create demo blockchain queue entries
+        for i in range(5):
+            demo_blockchain = BlockchainQueue(
+                event_id=f"B{i:03d}",
+                status=random.choice(["SYNCED", "PENDING", "FAILED"]),
+                retry_count=random.randint(0, 3),
+                last_attempt=datetime.utcnow()
+            )
+            db.add(demo_blockchain)
+        
+        db.commit()
+        return {"status": "Demo data seeded successfully", "events_created": 10, "decisions_created": 10, "blockchain_entries": 5}
+    finally:
+        db.close()
+
+# REAL MODE: UNIFIED INGESTION ENDPOINT
+from pydantic import BaseModel
+from typing import Optional
+
+class TollRequest(BaseModel):
+    reader_id: str
+    tag_hash: str
+    timestamp: Optional[int] = None
+    speed: Optional[int] = 60
+    nonce: Optional[str] = None
+    signature: Optional[str] = None
+    key_version: Optional[str] = "1"
+    source: str = "IOT"  # "IOT" or "MANUAL"
+
+@app.post("/ingest/toll")
+async def ingest_toll(request: TollRequest):
+    """
+    Unified toll ingestion endpoint for both manual and IoT sources.
+    This is the single source of truth for all toll events.
+    """
+    from database import SessionLocal, Reader, ReaderTrust, TollEvent, DecisionTelemetry
+    from datetime import datetime
+    import time
+    import hashlib
+    import hmac
+    
+    db = SessionLocal()
+    try:
+        # Get current time if not provided
+        if not request.timestamp:
+            request.timestamp = int(time.time())
+        
+        # Generate nonce if not provided
+        if not request.nonce:
+            import uuid
+            request.nonce = str(uuid.uuid4())[:8]
+        
+        # Verify reader exists and is active
+        reader = db.query(Reader).filter(
+            Reader.reader_id == request.reader_id,
+            Reader.status == "ACTIVE"
+        ).first()
+        
+        if not reader:
+            return {"error": f"Reader {request.reader_id} not found or inactive", "status": "error"}
+        
+        # Verify reader trust status
+        is_trusted, trust_status, trust_score = evaluate_reader_trust(request.reader_id, db)
+        
+        if not is_trusted:
+            # Reader is suspended, block the transaction immediately
+            result = {
+                "flagged": True,
+                "action": "block",
+                "reasons": [f"Reader suspended due to low trust score ({trust_score})"],
+                "ml_scores": {
+                    "modelA_prob": 0.0,
+                    "modelB_prob": 0.0,
+                    "iso_flag": 0
+                },
+                "trust_info": {
+                    "reader_id": request.reader_id,
+                    "trust_score": trust_score,
+                    "trust_status": trust_status
+                }
+            }
+            return result
+        
+        # Process the toll transaction (simplified version)
+        # In a real system, you'd do full validation here
+        decision = "allow"  # Default to allow for demo
+        reasons = [f"Valid {request.source} toll transaction"]
+        
+        # Create toll event record
+        toll_event = TollEvent(
+            event_id=request.nonce[:16],  # Use nonce as event ID
+            tag_hash=request.tag_hash,
+            reader_id=request.reader_id,
+            timestamp=request.timestamp,
+            nonce=request.nonce,
+            decision=decision
+        )
+        db.add(toll_event)
+        
+        # Create decision telemetry
+        from decision_logger import log_decision
+        log_decision(
+            event_id=request.nonce[:16],
+            reader_id=request.reader_id,
+            trust_score=trust_score,
+            reader_status=trust_status,
+            decision=decision,
+            reason=f"{request.source} transaction: {', '.join(reasons)}",
+            ml_a=0.1,
+            ml_b=0.15,
+            anomaly=0
+        )
+        
+        # Update reader's last seen timestamp
+        reader_trust = db.query(ReaderTrust).filter(ReaderTrust.reader_id == request.reader_id).first()
+        if reader_trust:
+            reader_trust.last_updated = datetime.utcnow()
+        
+        db.commit()
+        
+        return {
+            "status": "success",
+            "action": decision,
+            "reasons": reasons,
+            "reader_id": request.reader_id,
+            "tag_hash": request.tag_hash,
+            "timestamp": request.timestamp,
+            "source": request.source,
+            "trust_info": {
+                "trust_score": trust_score,
+                "trust_status": trust_status
+            }
+        }
+    except Exception as e:
+        return {"error": str(e), "status": "error"}
+    finally:
+        db.close()
+
+# Legacy endpoint for backward compatibility
+@app.post("/iot/toll")
+async def iot_toll_endpoint(request: TollRequest):
+    """
+    Legacy endpoint for IoT devices (redirects to unified endpoint).
+    """
+    # Set source to IOT for legacy endpoint
+    request.source = "IOT"
+    return await ingest_toll(request)
+
 @app.post("/admin/register-readers")
 def register_readers():
     from database import SessionLocal, Reader, ReaderTrust
     db = SessionLocal()
     try:
         from sqlalchemy.exc import IntegrityError
-
+        
         # Create demo readers
         demo_readers = [
             {"reader_id": "RDR-001", "status": "ACTIVE"},
             {"reader_id": "RDR-002", "status": "ACTIVE"},
             {"reader_id": "RDR-003", "status": "ACTIVE"}
         ]
-
+        
         for reader_data in demo_readers:
             try:
-                reader = Reader(
-                    reader_id=reader_data["reader_id"],
-                    secret="demo_secret",
-                    key_version=1,
-                    status=reader_data["status"]
-                )
-                db.add(reader)
-                db.commit()
+                # Check if reader already exists
+                existing_reader = db.query(Reader).filter(Reader.reader_id == reader_data["reader_id"]).first()
+                if not existing_reader:
+                    reader = Reader(
+                        reader_id=reader_data["reader_id"],
+                        secret="demo_secret",
+                        key_version=1,
+                        status=reader_data["status"]
+                    )
+                    db.add(reader)
+                    db.commit()
             except IntegrityError:
                 db.rollback()  # Ignore if already exists
-
-        # Create demo trust records
+        
+        # Create or update demo trust records
         demo_trust_records = [
             {"reader_id": "RDR-001", "trust_score": 100, "trust_status": "TRUSTED"},
             {"reader_id": "RDR-002", "trust_score": 75, "trust_status": "TRUSTED"},
             {"reader_id": "RDR-003", "trust_score": 45, "trust_status": "DEGRADED"}
         ]
-
+        
         for trust_data in demo_trust_records:
             try:
-                trust = ReaderTrust(
-                    reader_id=trust_data["reader_id"],
-                    trust_score=trust_data["trust_score"],
-                    trust_status=trust_data["trust_status"]
-                )
-                db.add(trust)
+                # Check if trust record exists, if so update it, otherwise create new
+                existing_trust = db.query(ReaderTrust).filter(ReaderTrust.reader_id == trust_data["reader_id"]).first()
+                if existing_trust:
+                    existing_trust.trust_score = trust_data["trust_score"]
+                    existing_trust.trust_status = trust_data["trust_status"]
+                else:
+                    trust = ReaderTrust(
+                        reader_id=trust_data["reader_id"],
+                        trust_score=trust_data["trust_score"],
+                        trust_status=trust_data["trust_status"]
+                    )
+                    db.add(trust)
                 db.commit()
             except IntegrityError:
                 db.rollback()  # Ignore if already exists
-
+        
         return {"status": "Readers registered"}
     finally:
         db.close()
@@ -1134,7 +1376,7 @@ def simulate_toll():
 
         # Also create a toll event record in the database
         import uuid
-        from database import TollEvent, ReaderTrust
+        from database import TollEvent, ReaderTrust, BlockchainQueue
         import time
         toll_event = TollEvent(
             event_id=str(uuid.uuid4())[:16],  # Generate unique event ID
@@ -1145,13 +1387,23 @@ def simulate_toll():
             decision=result["action"]
         )
         db.add(toll_event)
-
+        
+        # Add entry to blockchain queue to make blockchain audit page show data
+        from datetime import datetime
+        blockchain_entry = BlockchainQueue(
+            event_id=str(uuid.uuid4())[:16],  # Generate unique event ID
+            status="SYNCED",  # Default to synced for demo
+            retry_count=0,
+            last_attempt=datetime.utcnow()
+        )
+        db.add(blockchain_entry)
+        
         # Update reader trust based on the transaction
         reader_trust = db.query(ReaderTrust).filter(ReaderTrust.reader_id == event["reader_id"]).first()
         if reader_trust:
             # Simple trust decay for demo - decrease trust slightly with each transaction
             trust_score = max(0, reader_trust.trust_score - 2)  # Decrease by 2 points per transaction
-
+            
             # Update status based on new trust score
             if trust_score <= 40:
                 status = "SUSPENDED"
@@ -1159,11 +1411,11 @@ def simulate_toll():
                 status = "DEGRADED"
             else:
                 status = "TRUSTED"
-
+                
             reader_trust.trust_score = trust_score
             reader_trust.trust_status = status
             reader_trust.last_updated = datetime.utcnow()
-
+        
         db.commit()
 
         db.close()
@@ -1244,7 +1496,7 @@ def auto_simulator():
             )
 
             # Also create a toll event record in the database
-            from database import TollEvent, ReaderTrust
+            from database import TollEvent, ReaderTrust, BlockchainQueue
             import time
             toll_event = TollEvent(
                 event_id=str(uuid.uuid4())[:16],  # Generate unique event ID
@@ -1255,13 +1507,23 @@ def auto_simulator():
                 decision=result["action"]
             )
             db.add(toll_event)
-
+            
+            # Add entry to blockchain queue to make blockchain audit page show data
+            from datetime import datetime
+            blockchain_entry = BlockchainQueue(
+                event_id=str(uuid.uuid4())[:16],  # Generate unique event ID
+                status="SYNCED",  # Default to synced for demo
+                retry_count=0,
+                last_attempt=datetime.utcnow()
+            )
+            db.add(blockchain_entry)
+            
             # Update reader trust based on the transaction
             reader_trust = db.query(ReaderTrust).filter(ReaderTrust.reader_id == event["reader_id"]).first()
             if reader_trust:
                 # Simple trust decay for demo - decrease trust slightly with each transaction
                 trust_score = max(0, reader_trust.trust_score - 2)  # Decrease by 2 points per transaction
-
+                
                 # Update status based on new trust score
                 if trust_score <= 40:
                     status = "SUSPENDED"
@@ -1269,11 +1531,11 @@ def auto_simulator():
                     status = "DEGRADED"
                 else:
                     status = "TRUSTED"
-
+                    
                 reader_trust.trust_score = trust_score
                 reader_trust.trust_status = status
                 reader_trust.last_updated = datetime.utcnow()
-
+            
             db.commit()
 
             db.close()
@@ -1284,6 +1546,62 @@ def auto_simulator():
 
 # Start the auto-simulator in a background thread
 if SIMULATION_MODE:
+    # Register demo readers first
+    from database import SessionLocal, Reader, ReaderTrust
+    db = SessionLocal()
+    try:
+        from sqlalchemy.exc import IntegrityError
+        
+        # Create demo readers
+        demo_readers = [
+            {"reader_id": "RDR-001", "status": "ACTIVE"},
+            {"reader_id": "RDR-002", "status": "ACTIVE"},
+            {"reader_id": "RDR-003", "status": "ACTIVE"}
+        ]
+        
+        for reader_data in demo_readers:
+            try:
+                # Check if reader already exists
+                existing_reader = db.query(Reader).filter(Reader.reader_id == reader_data["reader_id"]).first()
+                if not existing_reader:
+                    reader = Reader(
+                        reader_id=reader_data["reader_id"],
+                        secret="demo_secret",
+                        key_version=1,
+                        status=reader_data["status"]
+                    )
+                    db.add(reader)
+                    db.commit()
+            except IntegrityError:
+                db.rollback()  # Ignore if already exists
+        
+        # Create or update demo trust records
+        demo_trust_records = [
+            {"reader_id": "RDR-001", "trust_score": 100, "trust_status": "TRUSTED"},
+            {"reader_id": "RDR-002", "trust_score": 75, "trust_status": "TRUSTED"},
+            {"reader_id": "RDR-003", "trust_score": 45, "trust_status": "DEGRADED"}
+        ]
+        
+        for trust_data in demo_trust_records:
+            try:
+                # Check if trust record exists, if so update it, otherwise create new
+                existing_trust = db.query(ReaderTrust).filter(ReaderTrust.reader_id == trust_data["reader_id"]).first()
+                if existing_trust:
+                    existing_trust.trust_score = trust_data["trust_score"]
+                    existing_trust.trust_status = trust_data["trust_status"]
+                else:
+                    trust = ReaderTrust(
+                        reader_id=trust_data["reader_id"],
+                        trust_score=trust_data["trust_score"],
+                        trust_status=trust_data["trust_status"]
+                    )
+                    db.add(trust)
+                db.commit()
+            except IntegrityError:
+                db.rollback()  # Ignore if already exists
+    finally:
+        db.close()
+    
     simulator_thread = threading.Thread(target=auto_simulator, daemon=True)
     simulator_thread.start()
 

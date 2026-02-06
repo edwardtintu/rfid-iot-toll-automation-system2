@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Manual Toll Entry</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header>
+  <h1>Manual Toll Entry Panel</h1>
+  <nav>
+    <a href="index.html" style="color:white; margin-right:15px;">Dashboard</a>
+    <a href="readers.html" style="color:white; margin-right:15px;">Reader Trust</a>
+    <a href="decisions.html" style="color:white; margin-right:15px;">Decision Telemetry</a>
+    <a href="blockchain.html" style="color:white;">Blockchain Audit</a>
+  </nav>
+</header>
+
+<main>
+  <div class="card">
+    <h2>Manual Toll Event Entry</h2>
+    <p>Enter toll event data manually (simulates real IoT device behavior)</p>
+    
+    <form id="manual-toll-form">
+      <div>
+        <label for="reader-id">Reader ID:</label>
+        <select id="reader-id" required>
+          <option value="">Select Reader</option>
+          <option value="RDR-001">RDR-001 (TRUSTED)</option>
+          <option value="RDR-002">RDR-002 (TRUSTED)</option>
+          <option value="RDR-003">RDR-003 (DEGRADED)</option>
+        </select>
+      </div>
+      
+      <div>
+        <label for="tag-hash">Tag Hash:</label>
+        <input type="text" id="tag-hash" placeholder="Enter RFID Tag Hash (e.g., abc123...)" required>
+      </div>
+      
+      <div>
+        <label for="speed">Speed (km/h):</label>
+        <input type="number" id="speed" placeholder="Vehicle Speed" value="60">
+      </div>
+      
+      <div>
+        <label for="timestamp">Timestamp (Unix):</label>
+        <input type="number" id="timestamp" placeholder="Unix Timestamp" readonly>
+      </div>
+      
+      <div>
+        <label for="nonce">Nonce:</label>
+        <input type="text" id="nonce" placeholder="Random Nonce" readonly>
+      </div>
+      
+      <button type="submit">Submit Toll Event</button>
+    </form>
+    
+    <div id="manual-result" style="margin-top: 20px;"></div>
+  </div>
+</main>
+
+<script>
+  const API_BASE_URL = "https://htms-backend.onrender.com";
+  
+  // Generate timestamp and nonce on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('timestamp').value = Math.floor(Date.now() / 1000);
+    document.getElementById('nonce').value = Math.random().toString(36).substring(2, 15);
+  });
+  
+  // Handle manual toll form submission
+  document.getElementById('manual-toll-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+      reader_id: document.getElementById('reader-id').value,
+      tag_hash: document.getElementById('tag-hash').value,
+      speed: parseInt(document.getElementById('speed').value) || 60,
+      timestamp: parseInt(document.getElementById('timestamp').value),
+      nonce: document.getElementById('nonce').value,
+      source: "MANUAL"
+    };
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/ingest/toll`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        document.getElementById('manual-result').innerHTML = `
+          <div class="success">
+            <h3>Toll Event Recorded Successfully!</h3>
+            <p><strong>Status:</strong> ${result.status}</p>
+            <p><strong>Action:</strong> ${result.action}</p>
+            <p><strong>Reasons:</strong> ${Array.isArray(result.reasons) ? result.reasons.join(', ') : result.reasons}</p>
+            <p><strong>Reader:</strong> ${result.reader_id}</p>
+            <p><strong>Tag Hash:</strong> ${result.tag_hash}</p>
+            <p><strong>Source:</strong> ${result.source}</p>
+            <p><strong>Trust Score:</strong> ${result.trust_info?.trust_score || 'N/A'}</p>
+            <p><strong>Trust Status:</strong> ${result.trust_info?.trust_status || 'N/A'}</p>
+          </div>
+        `;
+        
+        // Generate new timestamp and nonce for next entry
+        document.getElementById('timestamp').value = Math.floor(Date.now() / 1000);
+        document.getElementById('nonce').value = Math.random().toString(36).substring(2, 15);
+      } else {
+        document.getElementById('manual-result').innerHTML = `
+          <div class="error">
+            <h3>Error Recording Toll Event</h3>
+            <p>${result.error || 'Unknown error'}</p>
+          </div>
+        `;
+      }
+    } catch (err) {
+      document.getElementById('manual-result').innerHTML = `
+        <div class="error">
+          <h3>Error</h3>
+          <p>${err.message}</p>
+        </div>
+      `;
+    }
+  });
+</script>
+</body>
+</html>
