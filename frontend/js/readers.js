@@ -1,8 +1,6 @@
-const API_BASE_URL = "https://htms-backend.onrender.com";
-
 async function loadReaders() {
   try {
-    const res = await fetch(API_BASE_URL + "/readers");
+    const res = await fetch(window.API_BASE_URL + "/readers");
     const readers = await res.json();
 
     const tbody = document.querySelector("#reader-table tbody");
@@ -12,23 +10,23 @@ async function loadReaders() {
       const row = document.createElement("tr");
 
       row.innerHTML = `
-        <td>${r.reader_id}</td>
+        <td><strong>${r.reader_id}</strong></td>
+        <td><span class="trust-score">${r.trust_score}/100</span></td>
+        <td class="${getStatusClass(r.status)}">${r.status}</td>
         <td>
-          ${r.trust_score}
           <div class="trust-bar">
             <div class="trust-bar-fill" style="width:${r.trust_score}%"></div>
           </div>
         </td>
-        <td class="status-${r.status}">${r.status}</td>
-        <td>${r.last_updated || 'N/A'}</td>
+        <td><small>${formatTimestamp(r.last_updated)}</small></td>
       `;
 
       tbody.appendChild(row);
     });
   } catch (error) {
     console.error("Error loading readers:", error);
-    document.querySelector("#reader-table tbody").innerHTML = 
-      `<tr><td colspan="3">Error loading reader data</td></tr>`;
+    document.querySelector("#reader-table tbody").innerHTML =
+      `<tr><td colspan="5">Error loading reader data</td></tr>`;
   }
 }
 

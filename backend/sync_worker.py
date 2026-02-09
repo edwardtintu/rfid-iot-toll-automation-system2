@@ -1,1 +1,38 @@
-from sqlalchemy import text\nfrom db import SessionLocal\nfrom datetime import datetime\n\ndef sync_pending_events(write_to_blockchain):\n    db = SessionLocal()\n    try:\n        result = db.execute(\n            text("""\n                SELECT event_id\n                FROM blockchain_queue\n                WHERE status = "PENDING"\n            """)\n        )\n\n        for row in result:\n            event_id = row.event_id\n            try:\n                write_to_blockchain(event_id)\n                db.execute(\n                    text("""\n                        UPDATE blockchain_queue\n                        SET status = "SYNCED",\n                            last_attempt = :ts\n                        WHERE event_id = :event_id\n                    """),\n                    {"event_id": event_id, "ts": datetime.utcnow()}\n                )\n            except Exception:\n                pass\n\n        db.commit()\n    finally:\n        db.close()
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from sqlalchemy import text
+from database import SessionLocal
+from datetime import datetime
+
+def sync_pending_events(write_to_blockchain):
+    db = SessionLocal()
+    try:
+        result = db.execute(
+            text("""
+                SELECT event_id
+                FROM blockchain_queue
+                WHERE status = "PENDING"
+            """)
+        )
+
+        for row in result:
+            event_id = row.event_id
+            try:
+                write_to_blockchain(event_id)
+                db.execute(
+                    text("""
+                        UPDATE blockchain_queue
+                        SET status = "SYNCED",
+                            last_attempt = :ts
+                        WHERE event_id = :event_id
+                    """),
+                    {"event_id": event_id, "ts": datetime.utcnow()}
+                )
+            except Exception:
+                pass
+
+        db.commit()
+    finally:
+        db.close()

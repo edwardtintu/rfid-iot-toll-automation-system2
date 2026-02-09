@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Trust Control Panel</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header>
+  <h1>Admin Trust Control Panel</h1>
+</header>
+
+<nav>
+  <a href="index.html">Dashboard</a>
+  <a href="readers.html">Reader Trust</a>
+  <a href="decisions.html">Decision Telemetry</a>
+  <a href="blockchain.html">Blockchain Audit</a>
+  <a href="manual-entry.html">Manual Entry</a>
+  <a href="admin-trust.html">Admin Control</a>
+  <a href="reader-management.html">Reader Management</a>
+  <a href="toll-processing.html">Toll Processing</a>
+</nav>
+
+<main>
+  <div class="container">
+    <div class="card">
+      <h2>Reader Trust Administration</h2>
+      <p>Manage reader trust scores and system access permissions</p>
+
+      <div class="form-section">
+        <h3>Reset Reader Trust</h3>
+        <form id="reset-trust-form">
+          <div>
+            <label for="reader-id-input">Reader ID:</label>
+            <input type="text" id="reader-id-input" placeholder="Enter Reader ID (e.g., RDR-001)" required>
+          </div>
+
+          <button type="submit">Reset Trust to 100 (TRUSTED)</button>
+        </form>
+
+        <div id="reset-result" style="margin-top: 20px;"></div>
+      </div>
+
+      <div class="form-section" style="margin-top: 30px;">
+        <h3>View Reader Activity Timeline</h3>
+        <form id="view-timeline-form">
+          <div>
+            <label for="timeline-reader-id">Reader ID:</label>
+            <input type="text" id="timeline-reader-id" placeholder="Enter Reader ID to view activity" required>
+          </div>
+
+          <button type="submit">View Activity Timeline</button>
+        </form>
+
+        <div id="timeline-result" style="margin-top: 20px;"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="js/common.js"></script>
+<script>
+  // Handle trust reset form submission
+  document.getElementById('reset-trust-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const readerId = document.getElementById('reader-id-input').value.trim();
+    const resultDiv = document.getElementById('reset-result');
+
+    if (!readerId) {
+      resultDiv.innerHTML = `
+        <div class="error">
+          <h3>❌ Error</h3>
+          <p>Please enter a Reader ID.</p>
+        </div>
+      `;
+      return;
+    }
+
+    try {
+      const response = await fetch(`${window.API_BASE_URL}/admin/reset-trust?reader_id=${encodeURIComponent(readerId)}`, {
+        method: 'POST'
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        resultDiv.innerHTML = `
+          <div class="success">
+            <h3>✅ Trust Reset Successful!</h3>
+            <div class="result-grid">
+              <div class="result-item">
+                <strong>Message:</strong> ${result.message}
+              </div>
+              <div class="result-item">
+                <strong>Reader ID:</strong> ${result.reader_id}
+              </div>
+              <div class="result-item">
+                <strong>New Trust Score:</strong> <span class="trust-score">${result.trust_score}/100</span>
+              </div>
+              <div class="result-item">
+                <strong>New Status:</strong> <span class="${getStatusClass(result.trust_status)}">${result.trust_status}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        resultDiv.innerHTML = `
+          <div class="error">
+            <h3>❌ Error Resetting Trust</h3>
+            <p><strong>Error:</strong> ${result.detail || result.error || 'Unknown error'}</p>
+            <p><strong>Status Code:</strong> ${response.status}</p>
+          </div>
+        `;
+      }
+    } catch (err) {
+      resultDiv.innerHTML = `
+        <div class="error">
+          <h3>🌐 Network Error</h3>
+          <p><strong>Error:</strong> ${err.message}</p>
+        </div>
+      `;
+    }
+  });
+
+  // Handle view timeline form submission
+  document.getElementById('view-timeline-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const readerId = document.getElementById('timeline-reader-id').value.trim();
+    const resultDiv = document.getElementById('timeline-result');
+
+    if (!readerId) {
+      resultDiv.innerHTML = `
+        <div class="error">
+          <h3>❌ Error</h3>
+          <p>Please enter a Reader ID.</p>
+        </div>
+      `;
+      return;
+    }
+
+    try {
+      const response = await fetch(`${window.API_BASE_URL}/readers/${encodeURIComponent(readerId)}/activity`);
+
+      if (response.ok) {
+        const activities = await response.json();
+
+        if (activities.length === 0) {
+          resultDiv.innerHTML = `
+            <div class="card">
+              <h4>Activity Timeline for ${readerId}</h4>
+              <p>No activity found for this reader.</p>
+            </div>
+          `;
+          return;
+        }
+
+        let html = `
+          <div class="card">
+            <h4>Activity Timeline for ${readerId} (${activities.length} events)</h4>
+            <div class="activity-list">
+        `;
+
+        activities.forEach(activity => {
+          html += `
+            <div class="activity-item">
+              <div class="activity-action">${activity.action}</div>
+              <div class="activity-detail">${activity.detail}</div>
+              <div class="activity-timestamp">${formatTimestamp(activity.timestamp)}</div>
+            </div>
+          `;
+        });
+
+        html += `
+            </div>
+          </div>
+        `;
+
+        resultDiv.innerHTML = html;
+      } else {
+        resultDiv.innerHTML = `
+          <div class="error">
+            <h3>❌ Error Loading Timeline</h3>
+            <p><strong>Error:</strong> ${response.statusText}</p>
+            <p><strong>Status Code:</strong> ${response.status}</p>
+          </div>
+        `;
+      }
+    } catch (err) {
+      resultDiv.innerHTML = `
+        <div class="error">
+          <h3>🌐 Network Error</h3>
+          <p><strong>Error:</strong> ${err.message}</p>
+        </div>
+      `;
+    }
+  });
+</script>
+</body>
+</html>

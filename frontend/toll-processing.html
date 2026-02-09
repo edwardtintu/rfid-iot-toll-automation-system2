@@ -1,94 +1,193 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Toll Processing - HTMS</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-
-  <header>
-    <h1>HTMS – Toll Processing</h1>
-    <nav>
-      <a href="index.html">Dashboard</a> | 
-      <a href="toll-processing.html">Toll Processing</a> | 
-      <a href="reader-management.html">Reader Management</a>
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="logo">
+      <i class="fas fa-road"></i>
+      <h2>HTMS</h2>
+    </div>
+    <nav class="nav-menu">
+      <a href="index.html" class="nav-link">
+        <i class="fas fa-chart-line"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="readers.html" class="nav-link">
+        <i class="fas fa-microchip"></i>
+        <span>Reader Trust</span>
+      </a>
+      <a href="decisions.html" class="nav-link">
+        <i class="fas fa-brain"></i>
+        <span>Decision Telemetry</span>
+      </a>
+      <a href="blockchain.html" class="nav-link">
+        <i class="fas fa-link"></i>
+        <span>Blockchain Audit</span>
+      </a>
+      <a href="manual-entry.html" class="nav-link">
+        <i class="fas fa-edit"></i>
+        <span>Manual Entry</span>
+      </a>
+      <a href="toll-processing.html" class="nav-link active">
+        <i class="fas fa-exchange-alt"></i>
+        <span>Toll Processing</span>
+      </a>
+      <a href="reader-management.html" class="nav-link">
+        <i class="fas fa-cog"></i>
+        <span>Reader Management</span>
+      </a>
     </nav>
-  </header>
+  </aside>
 
-  <main>
-    <div class="dashboard-container">
-      <!-- Toll Transaction Form -->
-      <section class="card">
-        <h2>Process Toll Transaction</h2>
-        <form id="toll-form">
-          <div>
-            <label for="tag-hash">Tag Hash:</label>
-            <input type="text" id="tag-hash" placeholder="Enter RFID Tag Hash" required>
-          </div>
-          
-          <div>
-            <label for="reader-id">Reader ID:</label>
-            <input type="text" id="reader-id" placeholder="Enter Reader ID" required>
-          </div>
-          
-          <div>
-            <label for="speed">Speed (km/h):</label>
-            <input type="number" id="speed" placeholder="Vehicle Speed" value="60">
-          </div>
-          
-          <div>
-            <label for="timestamp">Timestamp:</label>
-            <input type="number" id="timestamp" placeholder="Unix Timestamp" readonly>
-          </div>
-          
-          <div>
-            <label for="nonce">Nonce:</label>
-            <input type="text" id="nonce" placeholder="Random Nonce" readonly>
-          </div>
-          
-          <div>
-            <label for="signature">Signature:</label>
-            <input type="text" id="signature" placeholder="HMAC Signature" required>
-          </div>
-          
-          <div>
-            <label for="key-version">Key Version:</label>
-            <input type="text" id="key-version" placeholder="Key Version" value="1">
-          </div>
-          
-          <button type="submit">Process Toll Transaction</button>
-        </form>
-        
-        <div id="toll-result" style="margin-top: 20px;"></div>
-      </section>
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Header -->
+    <header class="top-header">
+      <div class="header-left">
+        <button class="menu-toggle">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1>Toll Processing</h1>
+      </div>
+      <div class="header-right">
+        <div class="status-indicator">
+          <i class="fas fa-circle"></i>
+          <span id="backend-status">Connecting...</span>
+        </div>
+        <div class="user-profile">
+          <i class="fas fa-user-circle"></i>
+          <span>Admin</span>
+        </div>
+      </div>
+    </header>
 
-      <!-- Card Lookup -->
-      <section class="card">
-        <h2>Card Lookup</h2>
-        <div>
-          <input type="text" id="lookup-tag" placeholder="Enter Tag Hash for Lookup">
-          <button onclick="lookupCard()">Lookup Card</button>
+    <!-- Toll Processing Form -->
+    <section class="data-section">
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header">
+              <h2><i class="fas fa-exchange-alt"></i> Process Toll Transaction</h2>
+            </div>
+            <div class="card-body">
+              <form id="toll-form">
+                <div class="form-group">
+                  <label for="tag-hash">Tag Hash *</label>
+                  <input type="text" id="tag-hash" class="form-control" placeholder="Enter RFID Tag Hash" required>
+                </div>
+                
+                <div class="form-group">
+                  <label for="reader-id">Reader ID *</label>
+                  <input type="text" id="reader-id" class="form-control" placeholder="Enter Reader ID" required>
+                </div>
+                
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="speed">Speed (km/h)</label>
+                    <input type="number" id="speed" class="form-control" placeholder="Vehicle Speed" value="60">
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="timestamp">Timestamp</label>
+                    <input type="number" id="timestamp" class="form-control" placeholder="Unix Timestamp" readonly>
+                  </div>
+                </div>
+                
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="nonce">Nonce</label>
+                    <input type="text" id="nonce" class="form-control" placeholder="Random Nonce" readonly>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="key-version">Key Version</label>
+                    <input type="text" id="key-version" class="form-control" placeholder="Key Version" value="1">
+                  </div>
+                </div>
+                
+                <div class="form-group">
+                  <label for="signature">Signature *</label>
+                  <input type="text" id="signature" class="form-control" placeholder="HMAC Signature" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full">
+                  <i class="fas fa-paper-plane"></i> Process Transaction
+                </button>
+              </form>
+            </div>
+          </div>
         </div>
         
-        <div id="card-details" style="margin-top: 20px;"></div>
-      </section>
-    </div>
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header">
+              <h2><i class="fas fa-receipt"></i> Transaction Result</h2>
+            </div>
+            <div class="card-body">
+              <div id="toll-result" class="result-container">
+                <div class="empty-state">
+                  <i class="fas fa-receipt"></i>
+                  <p>Process a transaction to see results</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <h2><i class="fas fa-search"></i> Card Lookup</h2>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label for="lookup-tag">Tag Hash</label>
+                <input type="text" id="lookup-tag" class="form-control" placeholder="Enter Tag Hash for Lookup">
+              </div>
+              <button id="lookup-btn" class="btn btn-outline btn-full">
+                <i class="fas fa-search"></i> Lookup Card
+              </button>
+              <div id="card-details" class="mt-3"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
+  <script src="js/common.js"></script>
   <script>
-    const API_BASE_URL = "https://htms-backend.onrender.com";
-    
+    // Toggle sidebar on mobile
+    document.querySelector('.menu-toggle').addEventListener('click', function() {
+      document.querySelector('.sidebar').classList.toggle('collapsed');
+      document.querySelector('.main-content').classList.toggle('sidebar-collapsed');
+    });
+
+    // Add active class to current page
+    const currentPage = window.location.pathname.split('/').pop();
+    const navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+      if (link.getAttribute('href') === currentPage) {
+        link.classList.add('active');
+      }
+    });
+
     // Generate timestamp and nonce on page load
     document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('timestamp').value = Math.floor(Date.now() / 1000);
       document.getElementById('nonce').value = Math.random().toString(36).substring(2, 15);
     });
-    
+
     // Handle toll form submission
     document.getElementById('toll-form').addEventListener('submit', async function(e) {
       e.preventDefault();
-      
+
       const formData = {
         tag_hash: document.getElementById('tag-hash').value,
         reader_id: document.getElementById('reader-id').value,
@@ -98,76 +197,284 @@
         signature: document.getElementById('signature').value,
         key_version: document.getElementById('key-version').value
       };
-      
+
       try {
-        const response = await fetch(`${API_BASE_URL}/api/toll`, {
+        const response = await fetch(`${window.API_BASE_URL}/api/toll`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(formData)
         });
-        
+
         const result = await response.json();
-        
+
         if (response.ok) {
           document.getElementById('toll-result').innerHTML = `
-            <div class="success">
-              <h3>Transaction Processed Successfully!</h3>
-              <p><strong>Action:</strong> ${result.action}</p>
-              <p><strong>Reasons:</strong> ${Array.isArray(result.reasons) ? result.reasons.join(', ') : result.reasons}</p>
-              <p><strong>New Balance:</strong> ₹${result.new_balance || 'N/A'}</p>
-              <p><strong>Trust Score:</strong> ${result.trust_info?.trust_score || 'N/A'}</p>
-              <p><strong>Trust Status:</strong> ${result.trust_info?.trust_status || 'N/A'}</p>
+            <div class="result-success">
+              <div class="result-header">
+                <i class="fas fa-check-circle"></i>
+                <h3>Transaction Processed Successfully!</h3>
+              </div>
+              <div class="result-details">
+                <div class="result-row">
+                  <span class="result-label">Action:</span>
+                  <span class="result-value decision-${result.action}">${result.action}</span>
+                </div>
+                <div class="result-row">
+                  <span class="result-label">Reasons:</span>
+                  <span class="result-value">${Array.isArray(result.reasons) ? result.reasons.join(', ') : result.reasons}</span>
+                </div>
+                <div class="result-row">
+                  <span class="result-label">New Balance:</span>
+                  <span class="result-value">₹${result.new_balance || 'N/A'}</span>
+                </div>
+                <div class="result-row">
+                  <span class="result-label">Trust Score:</span>
+                  <span class="result-value">${result.trust_info?.trust_score || 'N/A'}</span>
+                </div>
+                <div class="result-row">
+                  <span class="result-label">Trust Status:</span>
+                  <span class="result-value status-${result.trust_info?.trust_status?.toLowerCase() || 'unknown'}">${result.trust_info?.trust_status || 'N/A'}</span>
+                </div>
+                <div class="result-row">
+                  <span class="result-label">ML Scores:</span>
+                  <span class="result-value">
+                    A: ${(result.ml_scores?.modelA_prob || 0).toFixed(3)}, 
+                    B: ${(result.ml_scores?.modelB_prob || 0).toFixed(3)}, 
+                    ISO: ${result.ml_scores?.iso_flag || 0}
+                  </span>
+                </div>
+              </div>
             </div>
           `;
         } else {
           document.getElementById('toll-result').innerHTML = `
-            <div class="error">
-              <h3>Error Processing Transaction</h3>
-              <p>${result.detail || 'Unknown error'}</p>
+            <div class="result-error">
+              <div class="result-header">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Error Processing Transaction</h3>
+              </div>
+              <div class="result-details">
+                <div class="result-row">
+                  <span class="result-label">Error:</span>
+                  <span class="result-value">${result.detail || 'Unknown error'}</span>
+                </div>
+              </div>
             </div>
           `;
         }
       } catch (err) {
         document.getElementById('toll-result').innerHTML = `
-          <div class="error">
-            <h3>Error</h3>
-            <p>${err.message}</p>
+          <div class="result-error">
+            <div class="result-header">
+              <i class="fas fa-exclamation-triangle"></i>
+              <h3>Error</h3>
+            </div>
+            <div class="result-details">
+              <div class="result-row">
+                <span class="result-label">Message:</span>
+                <span class="result-value">${err.message}</span>
+              </div>
+            </div>
           </div>
         `;
       }
     });
-    
+
     // Card lookup function
-    async function lookupCard() {
+    document.getElementById('lookup-btn').addEventListener('click', async function() {
       const tagHash = document.getElementById('lookup-tag').value.trim();
       if (!tagHash) {
-        document.getElementById('card-details').innerHTML = '<p>Please enter a tag hash.</p>';
+        document.getElementById('card-details').innerHTML = '<p class="error">Please enter a tag hash.</p>';
         return;
       }
-      
+
       try {
-        const response = await fetch(`${API_BASE_URL}/api/card/${tagHash}`);
-        
+        const response = await fetch(`${window.API_BASE_URL}/api/card/${tagHash}`);
+
         if (response.ok) {
           const card = await response.json();
           document.getElementById('card-details').innerHTML = `
             <div class="card-info">
-              <p><strong>Owner:</strong> ${card.owner_name}</p>
-              <p><strong>Vehicle:</strong> ${card.vehicle_number}</p>
-              <p><strong>Type:</strong> ${card.vehicle_type}</p>
-              <p><strong>Balance:</strong> ₹${card.balance}</p>
-              <p><strong>Tariff Amount:</strong> ₹${card.tariff_amount}</p>
+              <div class="card-row">
+                <span class="card-label">Owner:</span>
+                <span class="card-value">${card.owner_name}</span>
+              </div>
+              <div class="card-row">
+                <span class="card-label">Vehicle:</span>
+                <span class="card-value">${card.vehicle_number}</span>
+              </div>
+              <div class="card-row">
+                <span class="card-label">Type:</span>
+                <span class="card-value">${card.vehicle_type}</span>
+              </div>
+              <div class="card-row">
+                <span class="card-label">Balance:</span>
+                <span class="card-value">₹${card.balance}</span>
+              </div>
+              <div class="card-row">
+                <span class="card-label">Tariff Amount:</span>
+                <span class="card-value">₹${card.tariff_amount}</span>
+              </div>
+              <div class="card-row">
+                <span class="card-label">Last Seen:</span>
+                <span class="card-value">${formatTimestamp(card.last_seen) || 'N/A'}</span>
+              </div>
             </div>
           `;
         } else {
-          document.getElementById('card-details').innerHTML = '<p>Card not found.</p>';
+          document.getElementById('card-details').innerHTML = '<p class="error">Card not found.</p>';
         }
       } catch (err) {
-        document.getElementById('card-details').innerHTML = `<p>Error: ${err.message}</p>`;
+        document.getElementById('card-details').innerHTML = `<p class="error">Error: ${err.message}</p>`;
       }
-    }
+    });
+
+    // Add notification styles dynamically
+    const style = document.createElement('style');
+    style.textContent = `
+      .form-row {
+        display: flex;
+        gap: 16px;
+      }
+      
+      .form-row .form-group {
+        flex: 1;
+      }
+      
+      .form-group {
+        margin-bottom: 16px;
+      }
+      
+      .form-group label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 500;
+        color: var(--dark);
+      }
+      
+      .form-control {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border-color 0.2s ease;
+        box-sizing: border-box;
+      }
+      
+      .form-control:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+      
+      .btn-full {
+        width: 100%;
+      }
+      
+      .result-container {
+        min-height: 300px;
+      }
+      
+      .result-success {
+        padding: 20px;
+        background: var(--success-light);
+        border-radius: 8px;
+        border-left: 4px solid var(--success);
+      }
+      
+      .result-error {
+        padding: 20px;
+        background: var(--danger-light);
+        border-radius: 8px;
+        border-left: 4px solid var(--danger);
+      }
+      
+      .result-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      
+      .result-header i {
+        font-size: 24px;
+      }
+      
+      .result-header h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+      }
+      
+      .result-success .result-header i {
+        color: var(--success);
+      }
+      
+      .result-error .result-header i {
+        color: var(--danger);
+      }
+      
+      .result-details {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .result-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+      }
+      
+      .result-label {
+        font-weight: 500;
+        color: var(--gray);
+      }
+      
+      .result-value {
+        font-weight: 600;
+        color: var(--dark);
+      }
+      
+      .card-info {
+        background: var(--hover-bg);
+        padding: 16px;
+        border-radius: 8px;
+      }
+      
+      .card-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+      }
+      
+      .card-label {
+        font-weight: 500;
+        color: var(--gray);
+      }
+      
+      .card-value {
+        font-weight: 600;
+        color: var(--dark);
+      }
+      
+      .mt-3 {
+        margin-top: 16px;
+      }
+      
+      .error {
+        color: var(--danger);
+        padding: 8px;
+        background: var(--danger-light);
+        border-radius: 4px;
+        margin: 0;
+      }
+    `;
+    document.head.appendChild(style);
   </script>
 </body>
 </html>

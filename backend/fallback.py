@@ -1,1 +1,37 @@
-from sqlalchemy import text\nfrom db import SessionLocal\nfrom datetime import datetime\n\ndef enqueue_blockchain_event(event_id):\n    db = SessionLocal()\n    try:\n        db.execute(\n            text("""\n                INSERT INTO blockchain_queue (event_id, status)\n                VALUES (:event_id, "PENDING")\n            """),\n            {"event_id": event_id}\n        )\n        db.commit()\n    finally:\n        db.close()\n\ndef mark_event_synced(event_id):\n    db = SessionLocal()\n    try:\n        db.execute(\n            text("""\n                UPDATE blockchain_queue\n                SET status = "SYNCED",\n                    last_attempt = :ts\n                WHERE event_id = :event_id\n            """),\n            {"event_id": event_id, "ts": datetime.utcnow()}\n        )\n        db.commit()\n    finally:\n        db.close()
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from sqlalchemy import text
+from database import SessionLocal
+from datetime import datetime
+
+def enqueue_blockchain_event(event_id):
+    db = SessionLocal()
+    try:
+        db.execute(
+            text("""
+                INSERT INTO blockchain_queue (event_id, status)
+                VALUES (:event_id, "PENDING")
+            """),
+            {"event_id": event_id}
+        )
+        db.commit()
+    finally:
+        db.close()
+
+def mark_event_synced(event_id):
+    db = SessionLocal()
+    try:
+        db.execute(
+            text("""
+                UPDATE blockchain_queue
+                SET status = "SYNCED",
+                    last_attempt = :ts
+                WHERE event_id = :event_id
+            """),
+            {"event_id": event_id, "ts": datetime.utcnow()}
+        )
+        db.commit()
+    finally:
+        db.close()

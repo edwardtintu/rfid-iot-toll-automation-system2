@@ -1,8 +1,6 @@
-const API_BASE_URL = "https://htms-backend.onrender.com";
-
 async function loadDecisions() {
   try {
-    const res = await fetch(API_BASE_URL + "/decisions");
+    const res = await fetch(window.API_BASE_URL + "/decisions");
     const data = await res.json();
 
     const tbody = document.querySelector("#decision-table tbody");
@@ -12,20 +10,23 @@ async function loadDecisions() {
       const row = document.createElement("tr");
 
       row.innerHTML = `
-        <td class="small">${d.timestamp ? new Date(d.timestamp).toLocaleString() : 'N/A'}</td>
-        <td>${d.event_id || 'N/A'}</td>
-        <td>${d.reader_id}</td>
-        <td class="decision-${d.decision.toLowerCase()}">${d.decision}</td>
-        <td>${d.trust_score || 'N/A'}</td>
-        <td class="small">A:${d.ml_a ? d.ml_a.toFixed(3) : 'N/A'} | B:${d.ml_b ? d.ml_b.toFixed(3) : 'N/A'}</td>
-        <td>${d.reason || 'N/A'}</td>
+        <td><small>${formatTimestamp(d.timestamp)}</small></td>
+        <td><code>${truncate(d.event_id || 'N/A', 12)}</code></td>
+        <td><strong>${d.reader_id}</strong></td>
+        <td class="${getStatusClass(d.decision)}">${d.decision}</td>
+        <td><span class="trust-indicator">${d.trust_score || 'N/A'}</span></td>
+        <td class="ml-scores">
+          <span class="ml-a">A:${d.ml_a ? d.ml_a.toFixed(3) : 'N/A'}</span> | 
+          <span class="ml-b">B:${d.ml_b ? d.ml_b.toFixed(3) : 'N/A'}</span>
+        </td>
+        <td class="reason-cell">${truncate(d.reason || 'N/A', 25)}</td>
       `;
 
       tbody.appendChild(row);
     });
   } catch (error) {
     console.error("Error loading decisions:", error);
-    document.querySelector("#decision-table tbody").innerHTML = 
+    document.querySelector("#decision-table tbody").innerHTML =
       `<tr><td colspan="7">Error loading decision data</td></tr>`;
   }
 }
