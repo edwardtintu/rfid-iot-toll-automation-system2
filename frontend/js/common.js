@@ -20,6 +20,8 @@ document.addEventListener("DOMContentLoaded", () => {
       link.classList.add('active');
     }
   });
+
+  updateAdminKeyStatus();
 });
 
 // Utility function to format timestamps
@@ -81,6 +83,68 @@ window.formatTimestamp = window.formatTimestamp || formatTimestamp;
 window.getStatusClass = window.getStatusClass || getStatusClass;
 window.truncate = window.truncate || truncate;
 window.API_BASE_URL = window.API_BASE_URL || API_BASE_URL;
+
+// Admin API key helpers
+function getAdminApiKey() {
+  return localStorage.getItem('htms_admin_key') || '';
+}
+
+function adminHeaders() {
+  const key = getAdminApiKey();
+  return key ? { 'X-API-Key': key } : {};
+}
+
+window.getAdminApiKey = window.getAdminApiKey || getAdminApiKey;
+window.adminHeaders = window.adminHeaders || adminHeaders;
+
+function ensureAdminKeyIndicator() {
+  const headerRight = document.querySelector('.header-right');
+  if (!headerRight || document.getElementById('admin-key-indicator')) return;
+
+  const indicator = document.createElement('a');
+  indicator.href = 'admin-settings.html';
+  indicator.id = 'admin-key-indicator';
+  indicator.className = 'admin-key-indicator admin-key-unknown';
+  indicator.title = 'Admin key status';
+  indicator.innerHTML = '<i class="fas fa-user-shield"></i><span class="admin-key-label">Key: Unknown</span>';
+  headerRight.prepend(indicator);
+}
+
+async function updateAdminKeyStatus() {
+  ensureAdminKeyIndicator();
+  const indicator = document.getElementById('admin-key-indicator');
+  if (!indicator) return;
+
+  try {
+    const response = await fetch(`${window.API_BASE_URL}/system/status`, {
+      headers: { ...window.adminHeaders() }
+    });
+    if (!response.ok) {
+      indicator.className = 'admin-key-indicator admin-key-invalid';
+      indicator.title = 'Admin key invalid or missing';
+      return;
+    }
+    const data = await response.json();
+    if (data.key_valid) {
+      indicator.className = 'admin-key-indicator admin-key-valid';
+      indicator.title = 'Admin key valid';
+      const label = indicator.querySelector('.admin-key-label');
+      if (label) label.textContent = 'Key: Valid';
+    } else {
+      indicator.className = 'admin-key-indicator admin-key-invalid';
+      indicator.title = 'Admin key invalid or missing';
+      const label = indicator.querySelector('.admin-key-label');
+      if (label) label.textContent = 'Key: Invalid';
+    }
+  } catch (e) {
+    indicator.className = 'admin-key-indicator admin-key-unknown';
+    indicator.title = 'Admin key status unknown';
+    const label = indicator.querySelector('.admin-key-label');
+    if (label) label.textContent = 'Key: Unknown';
+  }
+}
+
+window.updateAdminKeyStatus = window.updateAdminKeyStatus || updateAdminKeyStatus;
 
 // Error handling wrapper
 function handleApiError(error, context = '') {

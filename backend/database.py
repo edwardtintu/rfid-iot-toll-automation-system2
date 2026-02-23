@@ -1,6 +1,6 @@
 # backend/database.py
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
 
@@ -126,7 +126,24 @@ class DecisionTelemetry(Base):
     ml_score_a = Column(Float)  # Model A probability score
     ml_score_b = Column(Float)  # Model B probability score
     anomaly_flag = Column(Integer)  # Anomaly detection flag (0/1)
+    confidence = Column(Float)  # Confidence score (0-1)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
 def init_db():
     Base.metadata.create_all(engine)
+
+def ensure_schema_updates():
+    """Best-effort schema updates for new columns in existing DBs."""
+    try:
+        with engine.connect() as conn:
+            if engine.url.drivername.startswith("sqlite"):
+                result = conn.execute(text("PRAGMA table_info(decision_telemetry)"))
+                cols = {row[1] for row in result.fetchall()}
+                if "confidence" not in cols:
+                    conn.execute(text("ALTER TABLE decision_telemetry ADD COLUMN confidence FLOAT"))
+                    conn.commit()
+            else:
+                conn.execute(text("ALTER TABLE decision_telemetry ADD COLUMN IF NOT EXISTS confidence FLOAT"))
+                conn.commit()
+    except Exception:
+        pass

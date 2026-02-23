@@ -1,0 +1,28 @@
+# Replay Attack Test for HTMS
+# Generated: 2026-02-22 23:19:52
+# Timestamp: 1771782592
+# Valid for: ~30 seconds from generation
+#
+# Instructions:
+# 1. Run ALL 3 requests immediately after generating
+# 2. Request 1 should ALLOW (trust=100, ML scores visible)
+# 3. Request 2 should BLOCK (replay detected, trust=85)
+# 4. Request 3 should ALLOW (trust=85)
+
+### Request 1: Valid transaction (should ALLOW, trust=100, ML scores visible)
+POST http://localhost:8000/api/toll
+Content-Type: application/json
+
+{"tag_hash":"ABC123XYZ","reader_id":"READER_01","timestamp":"1771782592","nonce":"nonce_1771782592_1","signature":"56a231456624d6842ccfdcc421db6ff4d058335e694f43873e82dee8caed3095","key_version":"1"}
+
+### Request 2: REPLAY ATTACK - Same nonce reused (should BLOCK, trust=85)
+POST http://localhost:8000/api/toll
+Content-Type: application/json
+
+{"tag_hash":"ABC123XYZ","reader_id":"READER_01","timestamp":"1771782592","nonce":"nonce_1771782592_1","signature":"56a231456624d6842ccfdcc421db6ff4d058335e694f43873e82dee8caed3095","key_version":"1"}
+
+### Request 3: Valid transaction with new nonce (should ALLOW, trust=85)
+POST http://localhost:8000/api/toll
+Content-Type: application/json
+
+{"tag_hash":"ABC123XYZ","reader_id":"READER_01","timestamp":"1771782592","nonce":"nonce_1771782592_2","signature":"5ed7fb03b6fb69463eb1365fa428bbd9fb462fe14edafe3f0035ab34239e3250","key_version":"1"}

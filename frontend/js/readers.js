@@ -30,5 +30,7 @@ async function loadReaders() {
   }
 }
 
-loadReaders();
-setInterval(loadReaders, 5000);
+// Load once on page load
+document.addEventListener("DOMContentLoaded", function() {
+  loadReaders();
+});

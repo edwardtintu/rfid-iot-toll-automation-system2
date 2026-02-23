@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -21,7 +21,10 @@
   <a href="admin-trust.html">Admin Control</a>
   <a href="reader-management.html">Reader Management</a>
   <a href="toll-processing.html">Toll Processing</a>
-</nav>
+      <a href="admin-settings.html" class="nav-link">
+        <i class="fas fa-user-shield"></i>
+        <span>Admin Settings</span>
+      </a>    </nav>
 
 <main>
   <div class="container">
@@ -58,7 +61,7 @@
     if (!readerId) {
       resultsDiv.innerHTML = `
         <div class="error">
-          <h3>❌ Error</h3>
+          <h3>âŒ Error</h3>
           <p>Please enter a Reader ID.</p>
         </div>
       `;
@@ -110,7 +113,7 @@
       } else {
         resultsDiv.innerHTML = `
           <div class="error">
-            <h3>❌ Error Loading Timeline</h3>
+            <h3>âŒ Error Loading Timeline</h3>
             <p><strong>Error:</strong> ${response.statusText}</p>
             <p><strong>Status Code:</strong> ${response.status}</p>
           </div>
@@ -119,7 +122,7 @@
     } catch (err) {
       resultsDiv.innerHTML = `
         <div class="error">
-          <h3>🌐 Network Error</h3>
+          <h3>ðŸŒ Network Error</h3>
           <p><strong>Error:</strong> ${err.message}</p>
         </div>
       `;

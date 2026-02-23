@@ -1,67 +1,184 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin Trust Control Panel</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Trust Control Panel - HTMS</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-
-<header>
-  <h1>Admin Trust Control Panel</h1>
-</header>
-
-<nav>
-  <a href="index.html">Dashboard</a>
-  <a href="readers.html">Reader Trust</a>
-  <a href="decisions.html">Decision Telemetry</a>
-  <a href="blockchain.html">Blockchain Audit</a>
-  <a href="manual-entry.html">Manual Entry</a>
-  <a href="admin-trust.html">Admin Control</a>
-  <a href="reader-management.html">Reader Management</a>
-  <a href="toll-processing.html">Toll Processing</a>
-</nav>
-
-<main>
-  <div class="container">
-    <div class="card">
-      <h2>Reader Trust Administration</h2>
-      <p>Manage reader trust scores and system access permissions</p>
-
-      <div class="form-section">
-        <h3>Reset Reader Trust</h3>
-        <form id="reset-trust-form">
-          <div>
-            <label for="reader-id-input">Reader ID:</label>
-            <input type="text" id="reader-id-input" placeholder="Enter Reader ID (e.g., RDR-001)" required>
-          </div>
-
-          <button type="submit">Reset Trust to 100 (TRUSTED)</button>
-        </form>
-
-        <div id="reset-result" style="margin-top: 20px;"></div>
-      </div>
-
-      <div class="form-section" style="margin-top: 30px;">
-        <h3>View Reader Activity Timeline</h3>
-        <form id="view-timeline-form">
-          <div>
-            <label for="timeline-reader-id">Reader ID:</label>
-            <input type="text" id="timeline-reader-id" placeholder="Enter Reader ID to view activity" required>
-          </div>
-
-          <button type="submit">View Activity Timeline</button>
-        </form>
-
-        <div id="timeline-result" style="margin-top: 20px;"></div>
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="logo">
+      <i class="fas fa-road"></i>
+      <h2>HTMS</h2>
+    </div>
+    <nav class="nav-menu">
+      <a href="index.html" class="nav-link">
+        <i class="fas fa-chart-line"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="readers.html" class="nav-link">
+        <i class="fas fa-microchip"></i>
+        <span>Reader Trust</span>
+      </a>
+      <a href="decisions.html" class="nav-link">
+        <i class="fas fa-brain"></i>
+        <span>Decision Telemetry</span>
+      </a>
+      <a href="blockchain.html" class="nav-link">
+        <i class="fas fa-link"></i>
+        <span>Blockchain Audit</span>
+      </a>
+      <a href="manual-entry.html" class="nav-link">
+        <i class="fas fa-edit"></i>
+        <span>Manual Entry</span>
+      </a>
+      <a href="toll-processing.html" class="nav-link">
+        <i class="fas fa-exchange-alt"></i>
+        <span>Toll Processing</span>
+      </a>
+      <a href="reader-management.html" class="nav-link">
+        <i class="fas fa-cog"></i>
+        <span>Reader Management</span>
+      </a>
+          <a href="admin-settings.html" class="nav-link">
+        <i class="fas fa-user-shield"></i>
+        <span>Admin Settings</span>
+      </a>    </nav>
+    
+    <!-- User Profile Section -->
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar">A</div>
+      <div class="sidebar-user-info">
+        <h4 class="sidebar-user-name">Admin User</h4>
+        <p class="sidebar-user-role">System Administrator</p>
       </div>
     </div>
-  </div>
-</main>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Header -->
+    <header class="top-header">
+      <div class="header-left">
+        <button class="menu-toggle">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1>Admin Trust Control</h1>
+      </div>
+      <div class="header-right">
+        <div class="status-indicator">
+          <i class="fas fa-circle"></i>
+          <span id="backend-status">Connected</span>
+        </div>
+        <button class="theme-toggle" id="theme-toggle">
+          <i class="fas fa-moon"></i>
+        </button>
+        <div class="user-profile">
+          <i class="fas fa-user-circle"></i>
+          <span>Admin</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="data-section">
+      <div class="row">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header">
+              <h2><i class="fas fa-shield-alt"></i> Reader Trust Administration</h2>
+            </div>
+            <div class="card-body">
+              <p>Manage reader trust scores and system access permissions</p>
+
+              <div class="form-section">
+                <h3>Reset Reader Trust</h3>
+                <form id="reset-trust-form">
+                  <div class="form-group">
+                    <label for="reader-id-input">Reader ID:</label>
+                    <input type="text" id="reader-id-input" class="form-control" placeholder="Enter Reader ID (e.g., RDR-001)" required>
+                  </div>
+
+                  <button type="submit" class="btn btn-primary">Reset Trust to 100 (TRUSTED)</button>
+                </form>
+
+                <div id="reset-result" style="margin-top: 20px;"></div>
+              </div>
+
+              <div class="form-section" style="margin-top: 30px;">
+                <h3>View Reader Activity Timeline</h3>
+                <form id="view-timeline-form">
+                  <div class="form-group">
+                    <label for="timeline-reader-id">Reader ID:</label>
+                    <input type="text" id="timeline-reader-id" class="form-control" placeholder="Enter Reader ID to view activity" required>
+                  </div>
+
+                  <button type="submit" class="btn btn-outline">View Activity Timeline</button>
+                </form>
+
+                <div id="timeline-result" style="margin-top: 20px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 
 <script src="js/common.js"></script>
 <script>
+  // Toggle sidebar on mobile
+  document.querySelector('.menu-toggle').addEventListener('click', function() {
+    document.querySelector('.sidebar').classList.toggle('collapsed');
+    document.querySelector('.main-content').classList.toggle('sidebar-collapsed');
+  });
+
+  // Add active class to current page
+  const currentPage = window.location.pathname.split('/').pop();
+  const navLinks = document.querySelectorAll('.nav-link');
+  navLinks.forEach(link => {
+    if (link.getAttribute('href') === currentPage) {
+      link.classList.add('active');
+    }
+  });
+  
+  // Theme toggle functionality
+  const themeToggle = document.getElementById('theme-toggle');
+  const themeIcon = themeToggle.querySelector('i');
+  
+  // Check for saved theme preference or respect OS preference
+  const savedTheme = localStorage.getItem('theme');
+  const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+  
+  if (savedTheme === 'dark' || (!savedTheme && prefersDarkScheme.matches)) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    themeIcon.classList.remove('fa-moon');
+    themeIcon.classList.add('fa-sun');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'light');
+    themeIcon.classList.remove('fa-sun');
+    themeIcon.classList.add('fa-moon');
+  }
+  
+  themeToggle.addEventListener('click', function() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    
+    if (currentTheme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'light');
+      themeIcon.classList.remove('fa-sun');
+      themeIcon.classList.add('fa-moon');
+      localStorage.setItem('theme', 'light');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      themeIcon.classList.remove('fa-moon');
+      themeIcon.classList.add('fa-sun');
+      localStorage.setItem('theme', 'dark');
+    }
+  });
+
   // Handle trust reset form submission
   document.getElementById('reset-trust-form').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -71,9 +188,11 @@
 
     if (!readerId) {
       resultDiv.innerHTML = `
-        <div class="error">
-          <h3>❌ Error</h3>
-          <p>Please enter a Reader ID.</p>
+        <div class="card">
+          <div class="alert alert-danger">
+            <h3>âŒ Error</h3>
+            <p>Please enter a Reader ID.</p>
+          </div>
         </div>
       `;
       return;
@@ -88,38 +207,44 @@
 
       if (response.ok) {
         resultDiv.innerHTML = `
-          <div class="success">
-            <h3>✅ Trust Reset Successful!</h3>
-            <div class="result-grid">
-              <div class="result-item">
-                <strong>Message:</strong> ${result.message}
-              </div>
-              <div class="result-item">
-                <strong>Reader ID:</strong> ${result.reader_id}
-              </div>
-              <div class="result-item">
-                <strong>New Trust Score:</strong> <span class="trust-score">${result.trust_score}/100</span>
-              </div>
-              <div class="result-item">
-                <strong>New Status:</strong> <span class="${getStatusClass(result.trust_status)}">${result.trust_status}</span>
+          <div class="card">
+            <div class="alert alert-success">
+              <h3>âœ… Trust Reset Successful!</h3>
+              <div class="result-grid">
+                <div class="result-item">
+                  <strong>Message:</strong> ${result.message}
+                </div>
+                <div class="result-item">
+                  <strong>Reader ID:</strong> ${result.reader_id}
+                </div>
+                <div class="result-item">
+                  <strong>New Trust Score:</strong> <span class="trust-score">${result.trust_score}/100</span>
+                </div>
+                <div class="result-item">
+                  <strong>New Status:</strong> <span class="${window.getStatusClass(result.trust_status)}">${result.trust_status}</span>
+                </div>
               </div>
             </div>
           </div>
         `;
       } else {
         resultDiv.innerHTML = `
-          <div class="error">
-            <h3>❌ Error Resetting Trust</h3>
-            <p><strong>Error:</strong> ${result.detail || result.error || 'Unknown error'}</p>
-            <p><strong>Status Code:</strong> ${response.status}</p>
+          <div class="card">
+            <div class="alert alert-danger">
+              <h3>âŒ Error Resetting Trust</h3>
+              <p><strong>Error:</strong> ${result.detail || result.error || 'Unknown error'}</p>
+              <p><strong>Status Code:</strong> ${response.status}</p>
+            </div>
           </div>
         `;
       }
     } catch (err) {
       resultDiv.innerHTML = `
-        <div class="error">
-          <h3>🌐 Network Error</h3>
-          <p><strong>Error:</strong> ${err.message}</p>
+        <div class="card">
+          <div class="alert alert-danger">
+            <h3>ðŸŒ Network Error</h3>
+            <p><strong>Error:</strong> ${err.message}</p>
+          </div>
         </div>
       `;
     }
@@ -134,9 +259,11 @@
 
     if (!readerId) {
       resultDiv.innerHTML = `
-        <div class="error">
-          <h3>❌ Error</h3>
-          <p>Please enter a Reader ID.</p>
+        <div class="card">
+          <div class="alert alert-danger">
+            <h3>âŒ Error</h3>
+            <p>Please enter a Reader ID.</p>
+          </div>
         </div>
       `;
       return;
@@ -169,7 +296,7 @@
             <div class="activity-item">
               <div class="activity-action">${activity.action}</div>
               <div class="activity-detail">${activity.detail}</div>
-              <div class="activity-timestamp">${formatTimestamp(activity.timestamp)}</div>
+              <div class="activity-timestamp">${window.formatTimestamp(activity.timestamp)}</div>
             </div>
           `;
         });
@@ -182,22 +309,121 @@
         resultDiv.innerHTML = html;
       } else {
         resultDiv.innerHTML = `
-          <div class="error">
-            <h3>❌ Error Loading Timeline</h3>
-            <p><strong>Error:</strong> ${response.statusText}</p>
-            <p><strong>Status Code:</strong> ${response.status}</p>
+          <div class="card">
+            <div class="alert alert-danger">
+              <h3>âŒ Error Loading Timeline</h3>
+              <p><strong>Error:</strong> ${response.statusText}</p>
+              <p><strong>Status Code:</strong> ${response.status}</p>
+            </div>
           </div>
         `;
       }
     } catch (err) {
       resultDiv.innerHTML = `
-        <div class="error">
-          <h3>🌐 Network Error</h3>
-          <p><strong>Error:</strong> ${err.message}</p>
+        <div class="card">
+          <div class="alert alert-danger">
+            <h3>ðŸŒ Network Error</h3>
+            <p><strong>Error:</strong> ${err.message}</p>
+          </div>
         </div>
       `;
     }
   });
+  
+  // Add additional styles for form elements
+  const style = document.createElement('style');
+  style.textContent = `
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      transition: var(--transition);
+      box-sizing: border-box;
+      background: var(--surface);
+      color: var(--text-primary);
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    }
+
+    .alert {
+      padding: 16px;
+      border-radius: 10px;
+      margin: 16px 0;
+    }
+
+    .alert-success {
+      background: var(--success-light);
+      border: 1px solid var(--success);
+      color: var(--success);
+    }
+
+    .alert-danger {
+      background: var(--danger-light);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .result-item {
+      padding: 12px;
+      background: var(--surface-light);
+      border-radius: 8px;
+    }
+
+    .activity-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .activity-item {
+      padding: 16px;
+      background: var(--surface-light);
+      border-radius: 10px;
+      border-left: 3px solid var(--primary);
+    }
+
+    .activity-action {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .activity-detail {
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .activity-timestamp {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+  `;
+  document.head.appendChild(style);
 </script>
 </body>
 </html>

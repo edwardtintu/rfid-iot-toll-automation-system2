@@ -12,7 +12,7 @@ def enqueue_blockchain_event(event_id):
         db.execute(
             text("""
                 INSERT INTO blockchain_queue (event_id, status)
-                VALUES (:event_id, "PENDING")
+                VALUES (:event_id, 'PENDING')
             """),
             {"event_id": event_id}
         )
@@ -26,7 +26,7 @@ def mark_event_synced(event_id):
         db.execute(
             text("""
                 UPDATE blockchain_queue
-                SET status = "SYNCED",
+                SET status = 'SYNCED',
                     last_attempt = :ts
                 WHERE event_id = :event_id
             """),

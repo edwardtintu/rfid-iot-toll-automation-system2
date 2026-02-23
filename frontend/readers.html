@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -44,7 +44,19 @@
         <i class="fas fa-cog"></i>
         <span>Reader Management</span>
       </a>
-    </nav>
+          <a href="admin-settings.html" class="nav-link">
+        <i class="fas fa-user-shield"></i>
+        <span>Admin Settings</span>
+      </a>    </nav>
+    
+    <!-- User Profile Section -->
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar">A</div>
+      <div class="sidebar-user-info">
+        <h4 class="sidebar-user-name">Admin User</h4>
+        <p class="sidebar-user-role">System Administrator</p>
+      </div>
+    </div>
   </aside>
 
   <!-- Main Content -->
@@ -60,8 +72,11 @@
       <div class="header-right">
         <div class="status-indicator">
           <i class="fas fa-circle"></i>
-          <span id="backend-status">Connecting...</span>
+          <span id="backend-status">Connected</span>
         </div>
+        <button class="theme-toggle" id="theme-toggle">
+          <i class="fas fa-moon"></i>
+        </button>
         <div class="user-profile">
           <i class="fas fa-user-circle"></i>
           <span>Admin</span>
@@ -86,6 +101,11 @@
               </div>
             </div>
             <div class="card-body">
+              <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" id="search-readers" placeholder="Search readers...">
+              </div>
+              
               <div class="table-responsive">
                 <table class="readers-table">
                   <thead>
@@ -126,6 +146,10 @@
       <div class="modal-body">
         <form id="add-reader-form">
           <div class="form-group">
+            <label for="admin-key">Admin API Key</label>
+            <input type="password" id="admin-key" class="form-control" placeholder="Enter admin API key" required>
+          </div>
+          <div class="form-group">
             <label for="reader-id">Reader ID</label>
             <input type="text" id="reader-id" class="form-control" placeholder="Enter reader ID" required>
           </div>
@@ -165,6 +189,40 @@
         link.classList.add('active');
       }
     });
+    
+    // Theme toggle functionality
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = themeToggle.querySelector('i');
+    
+    // Check for saved theme preference or respect OS preference
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    if (savedTheme === 'dark' || (!savedTheme && prefersDarkScheme.matches)) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      themeIcon.classList.remove('fa-moon');
+      themeIcon.classList.add('fa-sun');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+      themeIcon.classList.remove('fa-sun');
+      themeIcon.classList.add('fa-moon');
+    }
+    
+    themeToggle.addEventListener('click', function() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      
+      if (currentTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'light');
+        themeIcon.classList.remove('fa-sun');
+        themeIcon.classList.add('fa-moon');
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+        localStorage.setItem('theme', 'dark');
+      }
+    });
 
     // Load readers data
     async function loadReaders() {
@@ -173,7 +231,7 @@
         if (response.ok) {
           const readers = await response.json();
           const tbody = document.getElementById('readers-tbody');
-          
+
           if (readers.length === 0) {
             tbody.innerHTML = `
               <tr>
@@ -190,9 +248,9 @@
 
           let html = '';
           readers.forEach(reader => {
-            const statusClass = getStatusClass(reader.trust_status);
+            const statusClass = window.getStatusClass(reader.trust_status);
             const trustPercentage = reader.trust_score + '%';
-            
+
             html += `
               <tr>
                 <td>${reader.reader_id}</td>
@@ -205,7 +263,7 @@
                   </div>
                 </td>
                 <td><span class="${statusClass}">${reader.trust_status}</span></td>
-                <td>${formatTimestamp(reader.last_updated) || 'N/A'}</td>
+                <td>${window.formatTimestamp(reader.last_updated) || 'N/A'}</td>
                 <td>
                   <button class="btn btn-sm btn-outline view-reader" data-id="${reader.reader_id}">
                     <i class="fas fa-eye"></i>
@@ -217,7 +275,7 @@
               </tr>
             `;
           });
-          
+
           tbody.innerHTML = html;
 
           // Add event listeners for buttons
@@ -266,12 +324,37 @@
         const response = await fetch(`${window.API_BASE_URL}/api/reader/trust/${readerId}`);
         if (response.ok) {
           const reader = await response.json();
-          alert(`Reader Details:\nID: ${reader.reader_id}\nTrust Score: ${reader.trust_score}\nStatus: ${reader.trust_status}`);
+          
+          // Create notification element
+          const notification = document.createElement('div');
+          notification.className = 'notification notification-info';
+          notification.innerHTML = `
+            <i class="fas fa-info-circle"></i>
+            <div>
+              <strong>Reader Details:</strong><br>
+              <strong>ID:</strong> ${reader.reader_id}<br>
+              <strong>Trust Score:</strong> ${reader.trust_score}<br>
+              <strong>Status:</strong> ${reader.trust_status}
+            </div>
+            <button class="close-notification">&times;</button>
+          `;
+
+          document.body.appendChild(notification);
+
+          // Auto remove after 5 seconds
+          setTimeout(() => {
+            notification.remove();
+          }, 5000);
+
+          // Add close functionality
+          notification.querySelector('.close-notification').addEventListener('click', () => {
+            notification.remove();
+          });
         } else {
-          alert('Error loading reader details');
+          showNotification('Error loading reader details', 'error');
         }
       } catch (err) {
-        alert(`Error: ${err.message}`);
+        showNotification(`Error: ${err.message}`, 'error');
       }
     }
 
@@ -283,59 +366,43 @@
 
       try {
         const response = await fetch(`${window.API_BASE_URL}/api/reader/trust/reset/${readerId}`, {
-          method: 'POST'
+          method: 'POST',
+          headers: {
+            ...window.adminHeaders()
+          }
         });
 
         if (response.ok) {
           showNotification(`Trust for reader ${readerId} has been reset.`, 'success');
           loadReaders(); // Reload the data
         } else {
-          showNotification('Error resetting reader trust.', 'error');
+          const errorData = await response.json();
+          showNotification(`Error resetting reader trust: ${errorData.detail || 'Unknown error'}`, 'error');
         }
       } catch (err) {
         showNotification(`Error: ${err.message}`, 'error');
       }
     }
 
-    // Show notification
-    function showNotification(message, type = 'info') {
-      // Create notification element
-      const notification = document.createElement('div');
-      notification.className = `notification notification-${type}`;
-      notification.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-        <span>${message}</span>
-        <button class="close-notification">&times;</button>
-      `;
-      
-      // Add to body
-      document.body.appendChild(notification);
-      
-      // Auto remove after 3 seconds
-      setTimeout(() => {
-        notification.remove();
-      }, 3000);
-      
-      // Add close functionality
-      notification.querySelector('.close-notification').addEventListener('click', () => {
-        notification.remove();
-      });
-    }
-
     // Modal functionality
     const modal = document.getElementById('add-reader-modal');
     const modalCloseBtns = document.querySelectorAll('.modal-close');
-    
+
+    const storedAdminKey = localStorage.getItem('htms_admin_key');
+    if (storedAdminKey) {
+      document.getElementById('admin-key').value = storedAdminKey;
+    }
+
     document.getElementById('add-reader').addEventListener('click', function() {
       modal.style.display = 'flex';
     });
-    
+
     modalCloseBtns.forEach(btn => {
       btn.addEventListener('click', function() {
         modal.style.display = 'none';
       });
     });
-    
+
     // Close modal when clicking outside
     modal.addEventListener('click', function(e) {
       if (e.target === modal) {
@@ -345,20 +412,23 @@
 
     // Save reader
     document.getElementById('save-reader').addEventListener('click', async function() {
+      const adminKey = document.getElementById('admin-key').value;
       const readerId = document.getElementById('reader-id').value;
       const secret = document.getElementById('reader-secret').value;
       const status = document.getElementById('reader-status').value;
 
-      if (!readerId || !secret) {
+      if (!adminKey || !readerId || !secret) {
         showNotification('Please fill in all required fields', 'error');
         return;
       }
 
       try {
+        localStorage.setItem('htms_admin_key', adminKey);
         const response = await fetch(`${window.API_BASE_URL}/api/register_reader`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
+            'Content-Type': 'application/x-www-form-urlencoded',
+            ...window.adminHeaders()
           },
           body: `reader_id=${encodeURIComponent(readerId)}&secret=${encodeURIComponent(secret)}`
         });
@@ -381,12 +451,52 @@
 
     // Refresh button
     document.getElementById('refresh-readers').addEventListener('click', loadReaders);
+    
+    // Search functionality
+    document.getElementById('search-readers').addEventListener('input', function(e) {
+      const searchTerm = e.target.value.toLowerCase();
+      const rows = document.querySelectorAll('#readers-tbody tr');
+      
+      rows.forEach(row => {
+        const readerId = row.cells[0].textContent.toLowerCase();
+        
+        if (readerId.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+
+    // Show notification function
+    function showNotification(message, type = 'info') {
+      // Create notification element
+      const notification = document.createElement('div');
+      notification.className = `notification notification-${type}`;
+      notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+        <button class="close-notification">&times;</button>
+      `;
+
+      // Add to body
+      document.body.appendChild(notification);
+
+      // Auto remove after 3 seconds
+      setTimeout(() => {
+        notification.remove();
+      }, 3000);
+
+      // Add close functionality
+      notification.querySelector('.close-notification').addEventListener('click', () => {
+        notification.remove();
+      });
+    }
 
     // Initial load
     loadReaders();
-    setInterval(loadReaders, 30000); // Refresh every 30 seconds
 
-    // Add notification styles dynamically
+    // Add notification styles
     const style = document.createElement('style');
     style.textContent = `
       .notification {
@@ -394,9 +504,9 @@
         top: 20px;
         right: 20px;
         padding: 16px 20px;
-        border-radius: 8px;
+        border-radius: 12px;
         background: white;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        box-shadow: var(--modern-shadow);
         display: flex;
         align-items: center;
         gap: 12px;
@@ -404,92 +514,100 @@
         animation: slideInRight 0.3s ease-out;
         border-left: 4px solid var(--primary);
       }
-      
+
       .notification.notification-success {
         border-left-color: var(--success);
       }
-      
+
       .notification.notification-error {
         border-left-color: var(--danger);
       }
-      
+
       .notification i {
         font-size: 18px;
       }
-      
+
       .notification.notification-success i {
         color: var(--success);
       }
-      
+
       .notification.notification-error i {
         color: var(--danger);
       }
-      
+
       .close-notification {
         background: none;
         border: none;
         font-size: 20px;
         cursor: pointer;
-        color: var(--gray);
+        color: var(--text-muted);
         padding: 0;
         width: 24px;
         height: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
+        border-radius: 50%;
+        transition: var(--transition);
       }
       
+      .close-notification:hover {
+        background: var(--hover-bg);
+        color: var(--text-primary);
+      }
+
       .trust-score-display {
         display: flex;
         flex-direction: column;
         align-items: center;
       }
-      
+
       .trust-score-value {
         font-weight: 600;
         margin-bottom: 4px;
+        font-size: 14px;
       }
-      
+
       .trust-bar-small {
-        width: 100px;
+        width: 80px;
         height: 6px;
         background: var(--border);
         border-radius: 3px;
         overflow: hidden;
       }
-      
+
       .trust-bar-fill {
         height: 100%;
-        background: var(--gradient-blue);
+        background: linear-gradient(90deg, var(--primary), var(--accent));
         transition: width 0.5s ease;
       }
-      
+
       .table-responsive {
         overflow-x: auto;
       }
-      
+
       .readers-table {
         width: 100%;
         border-collapse: collapse;
       }
-      
+
       .readers-table th,
       .readers-table td {
         padding: 12px;
         text-align: left;
         border-bottom: 1px solid var(--border);
       }
-      
+
       .readers-table th {
-        background: var(--hover-bg);
+        background: var(--surface-light);
         font-weight: 600;
-        color: var(--gray);
+        color: var(--text-secondary);
       }
-      
+
       .readers-table tr:hover {
         background: var(--hover-bg);
       }
-      
+
       .modal-overlay {
         position: fixed;
         top: 0;
@@ -502,17 +620,18 @@
         justify-content: center;
         z-index: 10000;
       }
-      
+
       .modal {
-        background: white;
-        border-radius: 12px;
+        background: var(--bg-surface);
+        border-radius: 16px;
         box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         width: 90%;
         max-width: 500px;
         max-height: 90vh;
         overflow-y: auto;
+        border: 1px solid var(--border);
       }
-      
+
       .modal-header {
         padding: 20px;
         border-bottom: 1px solid var(--border);
@@ -520,58 +639,68 @@
         justify-content: space-between;
         align-items: center;
       }
-      
+
       .modal-header h3 {
         margin: 0;
         font-size: 18px;
         font-weight: 600;
+        color: var(--text-primary);
       }
-      
+
       .modal-close {
         background: none;
         border: none;
         font-size: 24px;
         cursor: pointer;
-        color: var(--gray);
+        color: var(--text-muted);
         padding: 0;
         width: 30px;
         height: 30px;
         display: flex;
         align-items: center;
         justify-content: center;
+        border-radius: 50%;
+        transition: var(--transition);
       }
       
+      .modal-close:hover {
+        background: var(--hover-bg);
+        color: var(--text-primary);
+      }
+
       .modal-body {
         padding: 20px;
       }
-      
+
       .form-group {
         margin-bottom: 16px;
       }
-      
+
       .form-group label {
         display: block;
         margin-bottom: 6px;
         font-weight: 500;
-        color: var(--dark);
+        color: var(--text-primary);
       }
-      
+
       .form-control {
         width: 100%;
-        padding: 10px 14px;
+        padding: 12px 16px;
         border: 1px solid var(--border);
-        border-radius: 8px;
+        border-radius: 10px;
         font-size: 14px;
-        transition: border-color 0.2s ease;
+        transition: var(--transition);
         box-sizing: border-box;
+        background: var(--bg-surface);
+        color: var(--text-primary);
       }
-      
+
       .form-control:focus {
         outline: none;
         border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
       }
-      
+
       .modal-footer {
         padding: 20px;
         border-top: 1px solid var(--border);
@@ -579,7 +708,7 @@
         justify-content: flex-end;
         gap: 12px;
       }
-      
+
       @keyframes slideInRight {
         from {
           transform: translateX(100%);

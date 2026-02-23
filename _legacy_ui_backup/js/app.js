@@ -145,8 +145,9 @@ async function triggerSync() {
 loadDashboard();
 loadAdditionalData();
 
+// Removed auto-refresh intervals to prevent page refreshing
 // Auto-refresh dashboard stats every 5 seconds
-setInterval(loadDashboard, 5000);
+// setInterval(loadDashboard, 5000);
 
 // Refresh additional data periodically (every 30 seconds)
-setInterval(loadAdditionalData, 30000);
+// setInterval(loadAdditionalData, 30000);

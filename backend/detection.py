@@ -1,14 +1,20 @@
 import pandas as pd, numpy as np, joblib
 from datetime import datetime, timedelta
 import warnings
+import os
 warnings.filterwarnings("ignore")
 
+# Get the directory where this script is located
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(BACKEND_DIR)
+MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
+
 # === Load ML Models ===
-modelA = joblib.load("../models/modelA_toll_rf.joblib")
-modelB = joblib.load("../models/modelB_toll_rf.joblib")
-isoB   = joblib.load("../models/modelB_toll_iso.joblib")
-toll_scaler_v2 = joblib.load("../models/toll_scaler_v2.joblib")  # New scaler for model A
-toll_scaler    = joblib.load("../models/toll_scaler.joblib")    # Original scaler for model B
+modelA = joblib.load(os.path.join(MODELS_DIR, "modelA_toll_rf.joblib"))
+modelB = joblib.load(os.path.join(MODELS_DIR, "modelB_toll_rf.joblib"))
+isoB   = joblib.load(os.path.join(MODELS_DIR, "modelB_toll_iso.joblib"))
+toll_scaler_v2 = joblib.load(os.path.join(MODELS_DIR, "toll_scaler_v2.joblib"))  # New scaler for model A
+toll_scaler    = joblib.load(os.path.join(MODELS_DIR, "toll_scaler.joblib"))    # Original scaler for model B
 
 
 # === RULE-BASED DETECTION ===

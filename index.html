@@ -2,93 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>HTMS Dashboard</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <title>HTMS</title>
 </head>
 <body>
-
-  <header>
-    <h1>HTMS – Hybrid Toll Management System</h1>
-    <p id="backend-status">Checking backend status...</p>
-    <nav>
-      <a href="readers.html" style="color:white; margin-right:15px; text-decoration: underline;">
-        Reader Trust Monitor
-      </a>
-      <a href="decisions.html" style="color:white; margin-right:15px; text-decoration: underline;">
-        Decision Telemetry
-      </a>
-      <a href="blockchain.html" style="color:white; margin-right:15px; text-decoration: underline;">
-        Blockchain Audit
-      </a>
-      <a href="toll-processing.html" style="color:white; margin-right:15px; text-decoration: underline;">
-        Toll Processing
-      </a>
-      <a href="reader-management.html" style="color:white; text-decoration: underline;">
-        Reader Management
-      </a>
-    </nav>
-  </header>
-
-  <main>
-    <div class="dashboard">
-      <div class="card">
-        <h3>Total Transactions</h3>
-        <p id="total-events">–</p>
-      </div>
-
-      <div class="card">
-        <h3>Allowed</h3>
-        <p id="allowed">–</p>
-      </div>
-
-      <div class="card">
-        <h3>Blocked</h3>
-        <p id="blocked">–</p>
-      </div>
-
-      <div class="card">
-        <h3>Active Readers</h3>
-        <p id="active-readers">–</p>
-      </div>
-
-      <div class="card">
-        <h3>Suspended Readers</h3>
-        <p id="suspended-readers">–</p>
-      </div>
-
-      <div class="card">
-        <h3>Blockchain Queue</h3>
-        <p id="blockchain-pending">–</p>
-      </div>
-    </div>
-
-    <div class="dashboard-container">
-      <!-- System Status Card -->
-      <section class="card">
-        <h2>System Status</h2>
-        <p id="system-info">Loading...</p>
-      </section>
-
-      <!-- Reader Trust Status Card -->
-      <section class="card">
-        <h2>Reader Trust Status</h2>
-        <div id="reader-trust-info">Loading...</div>
-      </section>
-
-      <!-- Recent Transactions Card -->
-      <section class="card">
-        <h2>Recent Transactions</h2>
-        <div id="recent-transactions">Loading...</div>
-      </section>
-
-      <!-- Blockchain Status Card -->
-      <section class="card">
-        <h2>Blockchain Status</h2>
-        <div id="blockchain-status">Loading...</div>
-      </section>
-    </div>
-  </main>
-
-  <script src="js/app.js"></script>
+  <script>
+    window.location.replace("frontend/index.html");
+  </script>
 </body>
 </html>
