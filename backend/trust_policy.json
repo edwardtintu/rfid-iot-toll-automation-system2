@@ -15,10 +15,55 @@
     "invalid_speed_value": 10,
     "balance_manipulation": 30,
     "operation_while_suspended": 5,
-    "peer_outlier": 12
+    "peer_outlier": 12,
+    "probation_challenge_failure": 10,
+    "operation_while_quarantined": 8
   },
 
   "rewards": {
     "clean_transaction": 1
+  },
+
+  "trust_decay_recovery": {
+    "enabled": true,
+    "recovery_rate_per_hour": 2.0,
+    "max_recovery_cap": 80,
+    "decay_function": "logarithmic",
+    "min_time_before_recovery_hours": 1.0
+  },
+
+  "quarantine": {
+    "auto_quarantine_threshold": 35,
+    "quarantine_on_violations": [
+      "REPLAY_ATTACK",
+      "AUTH_FAILURE",
+      "BALANCE_MANIPULATION"
+    ],
+    "severity_weights": {
+      "REPLAY_ATTACK": 3,
+      "AUTH_FAILURE": 2,
+      "BALANCE_MANIPULATION": 3,
+      "KEY_VERSION_MISMATCH": 1,
+      "RATE_LIMIT_EXCEEDED": 1,
+      "PEER_OUTLIER": 2
+    }
+  },
+
+  "probation": {
+    "challenges_required": 3,
+    "max_attempts_per_challenge": 2,
+    "challenge_timeout_minutes": 30,
+    "probation_trust_cap": 60
+  },
+
+  "peer_consensus": {
+    "min_voters_required": 2,
+    "approval_threshold": 0.6,
+    "vote_timeout_minutes": 60
+  },
+
+  "cross_reader_suspicion": {
+    "suspicion_multiplier": 1.5,
+    "suspicion_duration_minutes": 30
   }
 }
