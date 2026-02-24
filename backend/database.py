@@ -18,7 +18,6 @@ if os.getenv("USE_POSTGRES", "false").lower() == "true":
 else:
     # Ensure storage directory exists
     os.makedirs("backend/storage", exist_ok=True)
-    os.makedirs("/app/storage", exist_ok=True)  # For Docker compatibility
     DB_URL = os.getenv("DATABASE_URL", "sqlite:///backend/storage/toll_data.db")
 
 Base = declarative_base()
@@ -98,6 +97,8 @@ class ReaderTrust(Base):
     reader_id = Column(String(64), unique=True, nullable=False)
     trust_score = Column(Integer, default=100)  # 0-100
     trust_status = Column(String(16), default="TRUSTED")  # TRUSTED / DEGRADED / SUSPENDED
+    quarantine_status = Column(String(16), default="NORMAL")  # NORMAL / QUARANTINED / PROBATION
+    last_violation_at = Column(DateTime, nullable=True)  # For time-decay recovery calculation
     last_updated = Column(DateTime, default=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -127,6 +128,62 @@ class DecisionTelemetry(Base):
     ml_score_b = Column(Float)  # Model B probability score
     anomaly_flag = Column(Integer)  # Anomaly detection flag (0/1)
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+# ============================
+#  SELF-HEALING TRUST NETWORK (Patent #1)
+# ============================
+
+# Quarantine Record — tracks when readers enter/exit quarantine
+class QuarantineRecord(Base):
+    __tablename__ = "quarantine_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    reader_id = Column(String(64), nullable=False, index=True)
+    quarantine_reason = Column(String(64), nullable=False)  # Violation type that triggered quarantine
+    severity_level = Column(Integer, default=1)  # 1-3, affects probation difficulty
+    entered_at = Column(DateTime, default=datetime.utcnow)
+    released_at = Column(DateTime, nullable=True)
+    status = Column(String(16), default="ACTIVE")  # ACTIVE / PROBATION / RELEASED / EXPIRED
+    trust_score_at_entry = Column(Integer)  # Trust score when quarantine began
+    probation_started_at = Column(DateTime, nullable=True)
+
+# Probation Challenge — test transactions a quarantined reader must pass
+class ProbationChallenge(Base):
+    __tablename__ = "probation_challenges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    reader_id = Column(String(64), nullable=False, index=True)
+    quarantine_id = Column(Integer, nullable=False)  # References quarantine_records(id)
+    challenge_type = Column(String(32), nullable=False)  # KNOWN_TAG / TIMING_CHECK / SIGNATURE_VERIFY
+    expected_tag_hash = Column(String(128), nullable=True)  # Known-good tag hash for verification
+    challenge_data = Column(String, nullable=True)  # JSON blob with challenge parameters
+    issued_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+    result = Column(String(16), nullable=True)  # PASS / FAIL / TIMEOUT
+    attempt_count = Column(Integer, default=0)
+    max_attempts = Column(Integer, default=2)
+
+# Peer Consensus Vote — adjacent readers vote on quarantine restoration
+class PeerConsensusVote(Base):
+    __tablename__ = "peer_consensus_votes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    quarantine_id = Column(Integer, nullable=False, index=True)  # References quarantine_records(id)
+    voter_reader_id = Column(String(64), nullable=False)  # Reader casting the vote
+    vote = Column(String(8), nullable=False)  # APPROVE / REJECT
+    reason = Column(String, nullable=True)  # Optional justification
+    voted_at = Column(DateTime, default=datetime.utcnow)
+
+# Tag Suspicion — elevated scrutiny on tags seen by quarantined readers
+class TagSuspicion(Base):
+    __tablename__ = "tag_suspicions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tag_hash = Column(String(128), nullable=False, index=True)
+    source_reader_id = Column(String(64), nullable=False)  # Quarantined reader that triggered suspicion
+    suspicion_multiplier = Column(Float, default=1.5)  # Fraud detection sensitivity multiplier
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)  # Auto-expire after configurable duration
 
 def init_db():
     Base.metadata.create_all(engine)

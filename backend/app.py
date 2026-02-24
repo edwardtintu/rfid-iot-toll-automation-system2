@@ -202,7 +202,9 @@ def get_reader_trust_status(reader_id, db):
     return trust_record.trust_score, trust_record.trust_status
 
 def update_reader_trust_score(reader_id, violation_type, score_delta, details, db):
-    """Update reader trust score based on violations."""
+    """Update reader trust score based on violations.
+    Now also triggers autonomous quarantine if threshold is crossed (Patent #1).
+    """
     from database import ReaderTrust, ReaderViolation
 
     # Load trust policy
@@ -230,6 +232,9 @@ def update_reader_trust_score(reader_id, violation_type, score_delta, details, d
     new_score = max(0, min(100, trust_record.trust_score + score_delta))
     trust_record.trust_score = new_score
 
+    # Record violation timestamp for time-decay recovery (Patent #1)
+    trust_record.last_violation_at = datetime.utcnow()
+
     # Determine new status based on policy thresholds
     if new_score >= POLICY["thresholds"]["degraded"]:
         trust_record.trust_status = "TRUSTED"
@@ -241,14 +246,44 @@ def update_reader_trust_score(reader_id, violation_type, score_delta, details, d
     trust_record.last_updated = datetime.utcnow()
     db.commit()
 
+    # === PATENT #1: Autonomous Quarantine Check ===
+    # After recording the violation, check if this reader should be quarantined
+    try:
+        from self_healing_trust import check_and_enter_quarantine
+        quarantine = check_and_enter_quarantine(reader_id, violation_type, new_score, db)
+        if quarantine:
+            print(f"[SELF-HEALING] Reader {reader_id} quarantined: {violation_type} (severity={quarantine.severity_level})")
+    except Exception as e:
+        print(f"[SELF-HEALING] Error in quarantine check: {e}")
+
     return new_score, trust_record.trust_status
 
 def evaluate_reader_trust(reader_id, db):
-    """Evaluate if a reader is allowed to process toll events based on trust status."""
+    """Evaluate if a reader is allowed to process toll events based on trust status.
+    Now also checks quarantine status (Patent #1).
+    """
+    from database import ReaderTrust
     # Load trust policy
     POLICY = get_trust_policy()
 
     trust_score, trust_status = get_reader_trust_status(reader_id, db)
+
+    # === PATENT #1: Check quarantine status ===
+    trust_record = db.query(ReaderTrust).filter(
+        ReaderTrust.reader_id == reader_id
+    ).first()
+
+    if trust_record and trust_record.quarantine_status in ("QUARANTINED", "PROBATION"):
+        # Quarantined reader attempting to process — penalize and block
+        penalty = POLICY["penalties"].get("operation_while_quarantined", 8)
+        update_reader_trust_score(
+            reader_id,
+            "OPERATION_WHILE_QUARANTINED",
+            -penalty,
+            f"Quarantined reader ({trust_record.quarantine_status}) attempted to operate",
+            db
+        )
+        return False, f"QUARANTINED:{trust_record.quarantine_status}", trust_score
 
     if trust_status == "SUSPENDED":
         # Log violation for suspended reader attempting to operate
@@ -256,7 +291,7 @@ def evaluate_reader_trust(reader_id, db):
         update_reader_trust_score(
             reader_id,
             "OPERATION_WHILE_SUSPENDED",
-            penalty,  # Use penalty from policy
+            -penalty,
             "Reader attempted to operate while suspended",
             db
         )
@@ -283,7 +318,7 @@ import os
 from fastapi.middleware.cors import CORSMiddleware
 
 # Simulation mode flag
-SIMULATION_MODE = os.getenv("SIMULATION_MODE", "true").lower() == "true"
+SIMULATION_MODE = os.getenv("SIMULATION_MODE", "false").lower() == "true"
 
 app = FastAPI(title="Hybrid Toll Management System")
 
@@ -297,7 +332,8 @@ app.add_middleware(
 )
 
 import os
-LOG_FILE = "/app/storage/toll_logs.txt"  # Docker-friendly path
+_backend_dir = os.path.dirname(os.path.abspath(__file__))
+LOG_FILE = os.path.join(_backend_dir, "storage", "toll_logs.txt")
 os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
 
 
@@ -1790,6 +1826,166 @@ def reset_reader_trust(reader_id: str):
             }
     finally:
         db.close()
+
+# ============================
+#  SELF-HEALING TRUST NETWORK API (Patent #1)
+# ============================
+
+@app.get("/api/reader/quarantine/{reader_id}")
+def get_reader_quarantine(reader_id: str):
+    """Get quarantine status and details for a specific reader."""
+    from database import SessionLocal
+    from self_healing_trust import get_quarantine_status
+    db = SessionLocal()
+    try:
+        status = get_quarantine_status(reader_id, db)
+        if not status:
+            return {"reader_id": reader_id, "quarantine_status": "NORMAL", "message": "Reader is not quarantined"}
+        return status
+    finally:
+        db.close()
+
+@app.get("/api/quarantine/active")
+def get_active_quarantines():
+    """Get all currently quarantined readers with their details."""
+    from database import SessionLocal
+    from self_healing_trust import get_all_quarantined_readers
+    db = SessionLocal()
+    try:
+        return get_all_quarantined_readers(db)
+    finally:
+        db.close()
+
+@app.post("/api/reader/quarantine/{reader_id}/probation")
+def initiate_probation(reader_id: str):
+    """Initiate probation challenge protocol for a quarantined reader."""
+    from database import SessionLocal
+    from self_healing_trust import issue_probation_challenges
+    db = SessionLocal()
+    try:
+        challenges = issue_probation_challenges(reader_id, db)
+        if not challenges:
+            return {"success": False, "error": "Reader is not eligible for probation (not quarantined or already in probation)"}
+        return {
+            "success": True,
+            "reader_id": reader_id,
+            "challenges_issued": len(challenges),
+            "challenges": [
+                {
+                    "id": c.id,
+                    "type": c.challenge_type,
+                    "challenge_data": json.loads(c.challenge_data) if c.challenge_data else {},
+                    "max_attempts": c.max_attempts
+                }
+                for c in challenges
+            ]
+        }
+    finally:
+        db.close()
+
+@app.post("/api/reader/probation/{reader_id}/validate")
+async def validate_probation(reader_id: str, request: Request):
+    """Validate a probation challenge response from a reader.
+
+    Expected body: {"challenge_id": int, "response": {...}}
+    """
+    from database import SessionLocal
+    from self_healing_trust import validate_probation_response, attempt_reader_restoration, check_all_challenges_passed
+    from database import QuarantineRecord
+    db = SessionLocal()
+    try:
+        body = await request.json()
+        challenge_id = body.get("challenge_id")
+        response_data = body.get("response", {})
+
+        if not challenge_id:
+            return {"success": False, "error": "challenge_id is required"}
+
+        result = validate_probation_response(reader_id, challenge_id, response_data, db)
+
+        # If all challenges passed, auto-attempt restoration
+        if result["result"] == "PASS" and result.get("remaining", 1) == 0:
+            quarantine = db.query(QuarantineRecord).filter(
+                QuarantineRecord.reader_id == reader_id,
+                QuarantineRecord.status == "PROBATION"
+            ).order_by(QuarantineRecord.entered_at.desc()).first()
+
+            if quarantine and check_all_challenges_passed(reader_id, quarantine.id, db):
+                restoration = attempt_reader_restoration(reader_id, db)
+                result["restoration_attempt"] = restoration
+
+        return result
+    finally:
+        db.close()
+
+@app.post("/api/reader/quarantine/{quarantine_id}/vote")
+async def cast_quarantine_vote(quarantine_id: int, request: Request):
+    """Cast a peer consensus vote on a quarantined reader's restoration.
+
+    Expected body: {"voter_reader_id": str, "vote": "APPROVE"/"REJECT", "reason": str}
+    """
+    from database import SessionLocal
+    from self_healing_trust import cast_peer_vote
+    db = SessionLocal()
+    try:
+        body = await request.json()
+        voter_id = body.get("voter_reader_id")
+        vote = body.get("vote", "").upper()
+        reason = body.get("reason", "")
+
+        if not voter_id or vote not in ("APPROVE", "REJECT"):
+            return {"success": False, "error": "voter_reader_id and valid vote (APPROVE/REJECT) are required"}
+
+        result = cast_peer_vote(quarantine_id, voter_id, vote, reason, db)
+        return result
+    finally:
+        db.close()
+
+@app.get("/api/reader/quarantine/{quarantine_id}/consensus")
+def get_consensus_status(quarantine_id: int):
+    """Get peer consensus voting status for a quarantine."""
+    from database import SessionLocal
+    from self_healing_trust import evaluate_peer_consensus, request_peer_consensus
+    db = SessionLocal()
+    try:
+        consensus = evaluate_peer_consensus(quarantine_id, db)
+        peer_info = request_peer_consensus(quarantine_id, db)
+        return {**consensus, "peer_info": peer_info}
+    finally:
+        db.close()
+
+@app.post("/api/reader/quarantine/{reader_id}/restore")
+def restore_reader(reader_id: str):
+    """Attempt full restoration: probation passed + peer consensus achieved."""
+    from database import SessionLocal
+    from self_healing_trust import attempt_reader_restoration
+    db = SessionLocal()
+    try:
+        return attempt_reader_restoration(reader_id, db)
+    finally:
+        db.close()
+
+# Background thread: Trust Decay Recovery & Suspicion Cleanup
+def trust_decay_recovery_loop():
+    """Background thread that periodically applies trust decay recovery
+    and cleans up expired tag suspicions (Patent #1)."""
+    while True:
+        try:
+            time.sleep(300)  # Run every 5 minutes
+            from self_healing_trust import run_decay_recovery_cycle, cleanup_expired_suspicions
+            recovered = run_decay_recovery_cycle()
+            if recovered:
+                for reader_id, old_score, new_score in recovered:
+                    print(f"[SELF-HEALING] Trust decay recovery: {reader_id} {old_score} -> {new_score}")
+            expired = cleanup_expired_suspicions()
+            if expired:
+                print(f"[SELF-HEALING] Cleaned up {expired} expired tag suspicions")
+        except Exception as e:
+            print(f"[SELF-HEALING] Error in decay recovery loop: {e}")
+
+# Start the trust decay recovery background thread
+decay_thread = threading.Thread(target=trust_decay_recovery_loop, daemon=True)
+decay_thread.start()
 
 # Start background sync thread
 import threading
