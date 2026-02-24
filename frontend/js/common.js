@@ -31,11 +31,23 @@ function formatTimestamp(timestamp) {
     // Handle both Unix timestamps and ISO strings
     let date;
     if (typeof timestamp === 'number') {
-      date = new Date(timestamp * 1000); // Unix timestamp
+      // If timestamp is in milliseconds, use directly; if seconds, convert
+      date = timestamp > 1e12 ? new Date(timestamp) : new Date(timestamp * 1000);
     } else {
-      date = new Date(timestamp); // ISO string
+      date = new Date(timestamp); // ISO string or numeric string
+      if (!isNaN(Number(timestamp))) {
+        const num = Number(timestamp);
+        date = num > 1e12 ? new Date(num) : new Date(num * 1000);
+      }
     }
-    return date.toLocaleString();
+    return new Intl.DateTimeFormat(undefined, {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }).format(date);
   } catch (e) {
     return timestamp;
   }

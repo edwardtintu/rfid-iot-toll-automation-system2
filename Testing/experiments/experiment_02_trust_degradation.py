@@ -39,7 +39,14 @@ def send_transaction(timestamp, nonce, signature, test_name):
         "key_version": "1"
     }
     response = requests.post(f"{API_BASE}/api/toll", json=payload, timeout=10)
-    return response.json()
+    if not response.ok:
+        print(f"[ERROR] HTTP {response.status_code}: {response.text[:200]}")
+        raise RuntimeError(f"API returned {response.status_code}")
+    try:
+        return response.json()
+    except requests.exceptions.JSONDecodeError as e:
+        print(f"[ERROR] Invalid JSON response: {response.text[:200]}")
+        raise
 
 def get_trust_from_api():
     """Get trust info from API"""

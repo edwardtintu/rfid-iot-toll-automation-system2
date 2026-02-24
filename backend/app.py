@@ -1,9 +1,11 @@
 # backend/app.py
 import sys
 import os
+import traceback
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI, Request, HTTPException, Header, Depends
+from fastapi.responses import PlainTextResponse
 from datetime import datetime
 import hashlib, json, os, time
 import random
@@ -24,7 +26,21 @@ def get_trust_policy():
     policy_v1 = os.path.join(base_dir, "trust_policy.json")
     policy_file = policy_v2 if os.path.exists(policy_v2) else policy_v1
     with open(policy_file) as f:
-        return json.load(f)
+        policy = json.load(f)
+
+    # Normalize policy keys for case-insensitive lookup
+    for section in ["penalties", "weights"]:
+        if section in policy and isinstance(policy[section], dict):
+            normalized = {}
+            for k, v in policy[section].items():
+                if isinstance(k, str):
+                    normalized[k.lower()] = v
+                    normalized[k.upper()] = v
+                else:
+                    normalized[k] = v
+            policy[section].update(normalized)
+
+    return policy
 
 
 def verify_signature(uid, reader_id, timestamp, nonce, signature, db):
@@ -284,7 +300,7 @@ def evaluate_reader_trust(reader_id, db):
 
     if trust_status == "SUSPENDED":
         # Log violation for suspended reader attempting to operate
-        penalty = POLICY["penalties"]["operation_while_suspended"]
+        penalty = POLICY["penalties"]["OPERATION_WHILE_SUSPENDED"]
         update_reader_trust_score(
             reader_id,
             "OPERATION_WHILE_SUSPENDED",
@@ -329,6 +345,16 @@ def require_admin_key(x_api_key: str = Header(None, alias="X-API-Key")):
 
 
 app = FastAPI(title="Hybrid Toll Management System")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Global exception handler to return detailed error messages."""
+    error_details = traceback.format_exc()
+    print(f"ERROR: {error_details}", file=sys.stderr)
+    return PlainTextResponse(
+        content=f"Internal Server Error: {str(exc)}\n\n{error_details}",
+        status_code=500
+    )
 
 # Add CORS middleware to allow frontend requests
 app.add_middleware(
@@ -622,7 +648,7 @@ async def toll_endpoint(request: Request):
             from trust_engine import evaluate_trust
             # Use policy-based penalty
             POLICY = get_trust_policy()
-            penalty = POLICY["penalties"]["rate_limit_violation"]
+            penalty = POLICY["penalties"]["RATE_LIMIT_EXCEEDED"]
             update_reader_trust_score(
                 reader_id,
                 "RATE_LIMIT_EXCEEDED",
@@ -677,7 +703,7 @@ async def toll_endpoint(request: Request):
     if not verify_signature(tag_hash, reader_id, timestamp, nonce, signature, db):
         # Update trust score for authentication failures
         POLICY = get_trust_policy()
-        penalty = POLICY["penalties"]["auth_failure"]
+        penalty = POLICY["penalties"]["AUTH_FAILURE"]
         update_reader_trust_score(
             reader_id,
             "AUTH_FAILURE",
@@ -698,7 +724,7 @@ async def toll_endpoint(request: Request):
     if not reader or str(reader.key_version) != key_version:
         # Update trust score for key version mismatches
         POLICY = get_trust_policy()
-        penalty = POLICY["penalties"]["key_version_mismatch"]
+        penalty = POLICY["penalties"]["KEY_VERSION_MISMATCH"]
         update_reader_trust_score(
             reader_id,
             "KEY_VERSION_MISMATCH",
@@ -717,7 +743,7 @@ async def toll_endpoint(request: Request):
     if is_replay:
         # Update trust score for replay attacks
         POLICY = get_trust_policy()
-        penalty = POLICY["penalties"]["replay_attack"]
+        penalty = POLICY["penalties"]["REPLAY_ATTACK"]
         update_reader_trust_score(
             reader_id,
             "REPLAY_ATTACK",
@@ -733,7 +759,7 @@ async def toll_endpoint(request: Request):
     if detect_outlier_reader(reader_id):
         # Update trust score for peer outlier behavior
         POLICY = get_trust_policy()
-        penalty = POLICY["penalties"]["peer_outlier"]
+        penalty = POLICY["penalties"]["PEER_OUTLIER"]
         update_reader_trust_score(
             reader_id,
             "PEER_OUTLIER",
@@ -752,7 +778,7 @@ async def toll_endpoint(request: Request):
         if not card:
             # Update trust score for invalid card attempts
             POLICY = get_trust_policy()
-            penalty = POLICY["penalties"]["invalid_card_attempt"]
+            penalty = POLICY["penalties"]["INVALID_CARD_ATTEMPT"]
             update_reader_trust_score(
                 reader_id,
                 "INVALID_CARD_ATTEMPT",
@@ -776,7 +802,7 @@ async def toll_endpoint(request: Request):
         if speed < 0 or speed > 300:  # Validate speed is reasonable
             # Update trust score for invalid speed values (potential tampering)
             POLICY = get_trust_policy()
-            penalty = POLICY["penalties"]["invalid_speed_value"]
+            penalty = POLICY["penalties"]["INVALID_SPEED_VALUE"]
             update_reader_trust_score(
                 reader_id,
                 "INVALID_SPEED_VALUE",
@@ -807,7 +833,21 @@ async def toll_endpoint(request: Request):
         # ML-driven trust penalty with confidence scaling
         if result.get("action") == "block":
             reasons = result.get("reasons", [])
-            if any(r in ["Anomaly detected (ML + ISO)", "High fraud probability (RF)"] for r in reasons):
+            
+            # Check for duplicate scan (rule-based detection)
+            if any("Duplicate RFID scan" in r for r in reasons):
+                POLICY = get_trust_policy()
+                penalty = POLICY["penalties"].get("REPLAY_ATTACK", 18)
+                update_reader_trust_score(
+                    reader_id,
+                    "REPLAY_ATTACK",
+                    -penalty,
+                    "Duplicate scan detected within 1 minute",
+                    db,
+                    confidence=0.9
+                )
+            # Check for ML-based blocks
+            elif any(r in ["Anomaly detected (ML + ISO)", "High fraud probability (RF)"] for r in reasons):
                 POLICY = get_trust_policy()
                 penalty = POLICY["penalties"].get("ML_HIGH_RISK", 10)
                 update_reader_trust_score(
@@ -865,7 +905,7 @@ async def toll_endpoint(request: Request):
                 # This could indicate a compromised reader allowing unauthorized access
                 if tx.get("force_allow", False):  # Check if there's any force flag indicating compromise
                     POLICY = get_trust_policy()
-                    penalty = POLICY["penalties"]["balance_manipulation"]
+                    penalty = POLICY["penalties"]["BALANCE_MANIPULATION"]
                     update_reader_trust_score(
                         reader_id,
                         "BALANCE_MANIPULATION",
