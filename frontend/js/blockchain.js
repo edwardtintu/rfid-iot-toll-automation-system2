@@ -1,27 +1,69 @@
-async function loadBlockchainAudit() {
+// Load audit data
+async function loadAuditData() {
   try {
-    const res = await fetch(window.API_BASE_URL + "/blockchain/audit");
-    const data = await res.json();
+    const response = await fetch(`${window.API_BASE_URL}/blockchain/audit`);
+    
+    if (response.ok) {
+      const auditData = await response.json();
+      const tbody = document.getElementById('audit-tbody');
 
-    const tbody = document.querySelector("#blockchain-table tbody");
-    tbody.innerHTML = "";
+      if (auditData.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="text-center">
+              <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>No blockchain audit records found</p>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
 
-    data.forEach(b => {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td><code>${truncate(b.event_id, 12)}</code></td>
-        <td class="${getStatusClass(b.status)}">${b.status}</td>
-        <td><span class="retry-count">${b.retry_count || 0}</span></td>
-        <td><small>${formatTimestamp(b.last_attempt)}</small></td>
+      let html = '';
+      auditData.forEach(item => {
+        const statusClass = getStatusClass(item.status);
+        html += `
+          <tr>
+            <td><code>${truncate(item.event_id, 12)}</code></td>
+            <td class="${statusClass}">${item.status}</td>
+            <td><span class="retry-count">${item.retry_count || 0}</span></td>
+            <td><small>${formatTimestamp(item.last_attempt)}</small></td>
+            <td><span class="status-ACTIVE">Queued</span></td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+    } else {
+      document.getElementById('audit-tbody').innerHTML = `
+        <tr>
+          <td colspan="5" class="text-center">
+            <div class="empty-state">
+              <i class="fas fa-exclamation-triangle"></i>
+              <p>Error loading audit records</p>
+            </div>
+          </td>
+        </tr>
       `;
-      tbody.appendChild(row);
-    });
+    }
   } catch (error) {
     console.error("Error loading blockchain audit:", error);
-    document.querySelector("#blockchain-table tbody").innerHTML =
-      `<tr><td colspan="4">Error loading blockchain audit data</td></tr>`;
+    document.getElementById('audit-tbody').innerHTML = `
+      <tr>
+        <td colspan="5" class="text-center">
+          <div class="empty-state">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>Error loading audit records</p>
+          </div>
+        </td>
+      </tr>
+    `;
   }
 }
 
-loadBlockchainAudit();
-setInterval(loadBlockchainAudit, 5000);
+// Load once on page load
+document.addEventListener("DOMContentLoaded", function() {
+  loadAuditData();
+});

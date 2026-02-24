@@ -78,28 +78,28 @@ def send_to_chain(tx_hash, decision, reason, tagUID="N/A", vehicle_type="CAR", a
             'gasPrice': web3.to_wei('20', 'gwei')  # Lower gas price
         })
         
-        # Use your specific account and private key
-        # This is the account you provided
-        your_account = "0xfe427f1B10FD82bc654316058e0c2eed511f0Bb9"
-        your_private_key = "0x7715ec38c0aa2248b358292ed969c8146bfc6d5886acfc819fb4203ed8a512a4"
+        # Use account and private key from environment variables
+        your_account = os.getenv("BLOCKCHAIN_ACCOUNT")
+        your_private_key = os.getenv("BLOCKCHAIN_PRIVATE_KEY")
 
         # Check if the current account matches your account
-        if sender_account.lower() != your_account.lower():
-            print(f"[BLOCKCHAIN] Warning: Current account {sender_account} doesn't match expected account {your_account}")
-            # Try to use your account directly if it's available in the Ganache instance
-            if your_account.lower() in [acc.lower() for acc in accounts]:
-                sender_account = your_account
-            else:
-                print(f"[BLOCKCHAIN] Error: Your account {your_account} is not available in this Ganache instance")
-                print(f"[CHAIN LOG] TxHash={tx_hash[:10]}... Decision={decision} | Reason={reason or 'None'} [FALLBACK]")
-                return {"success": False, "error": "Account mismatch", "fallback_used": True}
+        if your_account:
+            if sender_account.lower() != your_account.lower():
+                print(f"[BLOCKCHAIN] Warning: Current account {sender_account} doesn't match expected account {your_account}")
+                # Try to use your account directly if it's available in the Ganache instance
+                if your_account.lower() in [acc.lower() for acc in accounts]:
+                    sender_account = your_account
+                else:
+                    print(f"[BLOCKCHAIN] Error: Your account {your_account} is not available in this Ganache instance")
+                    print(f"[CHAIN LOG] TxHash={tx_hash[:10]}... Decision={decision} | Reason={reason or 'None'} [FALLBACK]")
+                    return {"success": False, "error": "Account mismatch", "fallback_used": True}
 
         selected_private_key = your_private_key
         
         if not selected_private_key:
-            print(f"[BLOCKCHAIN] Error: Could not find private key for account {sender_account}")
+            print(f"[BLOCKCHAIN] Error: Missing BLOCKCHAIN_PRIVATE_KEY for account {sender_account}")
             print(f"[CHAIN LOG] TxHash={tx_hash[:10]}... Decision={decision} | Reason={reason or 'None'} [FALLBACK]")
-            return {"success": False, "error": "Could not find private key for account", "fallback_used": True}
+            return {"success": False, "error": "Missing private key", "fallback_used": True}
         
         # Sign and send the transaction
         signed_txn = web3.eth.account.sign_transaction(transaction, private_key=selected_private_key)

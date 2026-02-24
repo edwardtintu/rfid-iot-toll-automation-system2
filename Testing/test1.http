@@ -1,0 +1,17 @@
+# Simple Valid Transaction Test
+# Generated: 2026-02-22 23:31:36 IST
+# Timestamp: 1771783296
+#
+# !!! SEND THIS REQUEST NOW (within 10 seconds) !!!
+### Valid Transaction (should ALLOW with ML scores)
+POST http://localhost:8000/api/toll
+Content-Type: application/json
+
+{
+  "tag_hash": "1679a1d39bf32c43c53c7c79c2e8a051300728125869ebe993b2462fde8a5f73",
+  "reader_id": "READER_01",
+  "timestamp": "1771783296",
+  "nonce": "test_nonce_1771783296",
+  "signature": "wrong signature",
+  "key_version": "1"
+}

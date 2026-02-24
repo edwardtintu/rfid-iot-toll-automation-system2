@@ -31,5 +31,7 @@ async function loadDecisions() {
   }
 }
 
-loadDecisions();
-setInterval(loadDecisions, 5000);
+// Load once on page load
+document.addEventListener("DOMContentLoaded", function() {
+  loadDecisions();
+});

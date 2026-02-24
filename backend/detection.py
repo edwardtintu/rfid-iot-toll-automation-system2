@@ -1,14 +1,29 @@
 import pandas as pd, numpy as np, joblib
 from datetime import datetime, timedelta
 import warnings
+import os
+import traceback
 warnings.filterwarnings("ignore")
 
+# Get the directory where this script is located
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(BACKEND_DIR)
+MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
+
 # === Load ML Models ===
-modelA = joblib.load("../models/modelA_toll_rf.joblib")
-modelB = joblib.load("../models/modelB_toll_rf.joblib")
-isoB   = joblib.load("../models/modelB_toll_iso.joblib")
-toll_scaler_v2 = joblib.load("../models/toll_scaler_v2.joblib")  # New scaler for model A
-toll_scaler    = joblib.load("../models/toll_scaler.joblib")    # Original scaler for model B
+# Try to load models, fall back to None if incompatible
+try:
+    modelA = joblib.load(os.path.join(MODELS_DIR, "modelA_toll_rf.joblib"))
+    modelB = joblib.load(os.path.join(MODELS_DIR, "modelB_toll_rf.joblib"))
+    isoB   = joblib.load(os.path.join(MODELS_DIR, "modelB_toll_iso.joblib"))
+    toll_scaler_v2 = joblib.load(os.path.join(MODELS_DIR, "toll_scaler_v2.joblib"))
+    toll_scaler    = joblib.load(os.path.join(MODELS_DIR, "toll_scaler.joblib"))
+    MODELS_LOADED = True
+except Exception as e:
+    print(f"Warning: Could not load ML models: {e}")
+    print("Falling back to rule-based detection only")
+    modelA = modelB = isoB = toll_scaler_v2 = toll_scaler = None
+    MODELS_LOADED = False
 
 
 # === RULE-BASED DETECTION ===
@@ -47,36 +62,43 @@ def rule_based_detection(tx):
 def run_detection(tx):
     # Step 1 — Run rule-based logic
     rule_result = rule_based_detection(tx)
+    
+    # Default ML scores
+    pA, pB, iso_flag = 0.0, 0.0, 0
+    
+    # Step 2 — Run ML models if available
+    if MODELS_LOADED:
+        try:
+            # Step 2 — Prepare toll features
+            toll_feat = pd.DataFrame([[
+                tx.get("amount", 100),
+                tx.get("speed", 60),
+                tx.get("inter_arrival", 5),
+                np.sin(2 * np.pi * (datetime.utcnow().hour) / 24),
+                np.cos(2 * np.pi * (datetime.utcnow().hour) / 24)
+            ]], columns=["amount", "speed", "inter_arrival", "sin_hour", "cos_hour"])
 
-    # Step 2 — Prepare toll features
-    toll_feat = pd.DataFrame([[
-        tx.get("amount", 100),
-        tx.get("speed", 60),
-        tx.get("inter_arrival", 5),
-        np.sin(2 * np.pi * (datetime.utcnow().hour) / 24),
-        np.cos(2 * np.pi * (datetime.utcnow().hour) / 24)
-    ]], columns=["amount", "speed", "inter_arrival", "sin_hour", "cos_hour"])
+            X_toll = toll_scaler.transform(toll_feat)
+            pB = modelB.predict_proba(X_toll)[0, 1]
+            iso_flag = 1 if isoB.predict(X_toll)[0] == -1 else 0
 
-    X_toll = toll_scaler.transform(toll_feat)
-    pB = modelB.predict_proba(X_toll)[0, 1]
-    iso_flag = 1 if isoB.predict(X_toll)[0] == -1 else 0
-
-    # Step 3 — Toll fraud model for fraud detection using toll features
-    # Create a dummy input with the correct number of toll features (5: amount, speed, inter_arrival, sin_hour, cos_hour)
-    # Use more meaningful input based on the transaction data
-    dummy_credit = np.array([[tx.get("amount", 100), tx.get("speed", 60), tx.get("inter_arrival", 5), 
-                             np.sin(2 * np.pi * (datetime.utcnow().hour) / 24), 
-                             np.cos(2 * np.pi * (datetime.utcnow().hour) / 24)]])
-    dummy_credit_scaled = toll_scaler_v2.transform(dummy_credit)
-    pA = modelA.predict_proba(dummy_credit_scaled)[0, 1]
+            # Step 3 — Toll fraud model for fraud detection using toll features
+            dummy_credit = np.array([[tx.get("amount", 100), tx.get("speed", 60), tx.get("inter_arrival", 5),
+                                     np.sin(2 * np.pi * (datetime.utcnow().hour) / 24),
+                                     np.cos(2 * np.pi * (datetime.utcnow().hour) / 24)]])
+            dummy_credit_scaled = toll_scaler_v2.transform(dummy_credit)
+            pA = modelA.predict_proba(dummy_credit_scaled)[0, 1]
+        except Exception as e:
+            print(f"ML detection error: {e}")
+            # Fall back to rule-based only
 
     # Step 4 — Decision fusion
     if rule_result["high_confidence"]:
         action = "block"
-    elif iso_flag == 1 and pB > 0.6:
+    elif MODELS_LOADED and iso_flag == 1 and pB > 0.6:
         action = "block"
         rule_result["reasons"].append("Anomaly detected (ML + ISO)")
-    elif pB > 0.7:
+    elif MODELS_LOADED and pB > 0.7:
         action = "block"
         rule_result["reasons"].append("High fraud probability (RF)")
     elif "Duplicate RFID scan within 1 minute" in rule_result["reasons"]:

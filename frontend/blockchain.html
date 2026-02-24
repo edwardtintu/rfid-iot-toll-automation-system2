@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -12,8 +12,8 @@
   <!-- Sidebar Navigation -->
   <aside class="sidebar">
     <div class="logo">
-      <i class="fas fa-road"></i>
-      <h2>HTMS</h2>
+      <i class="fas fa-balance-scale"></i>
+      <h2>GOVT TOLL MGT</h2>
     </div>
     <nav class="nav-menu">
       <a href="index.html" class="nav-link">
@@ -44,7 +44,19 @@
         <i class="fas fa-cog"></i>
         <span>Reader Management</span>
       </a>
-    </nav>
+          <a href="admin-settings.html" class="nav-link">
+        <i class="fas fa-user-shield"></i>
+        <span>Admin Settings</span>
+      </a>    </nav>
+    
+    <!-- User Profile Section -->
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar">A</div>
+      <div class="sidebar-user-info">
+        <h4 class="sidebar-user-name">Admin User</h4>
+        <p class="sidebar-user-role">System Administrator</p>
+      </div>
+    </div>
   </aside>
 
   <!-- Main Content -->
@@ -55,13 +67,16 @@
         <button class="menu-toggle">
           <i class="fas fa-bars"></i>
         </button>
-        <h1>Blockchain Audit Trail</h1>
+        <h1>Blockchain Audit</h1>
       </div>
       <div class="header-right">
         <div class="status-indicator">
           <i class="fas fa-circle"></i>
-          <span id="backend-status">Connecting...</span>
+          <span id="backend-status">Connected</span>
         </div>
+        <button class="theme-toggle" id="theme-toggle">
+          <i class="fas fa-moon"></i>
+        </button>
         <div class="user-profile">
           <i class="fas fa-user-circle"></i>
           <span>Admin</span>
@@ -69,116 +84,163 @@
       </div>
     </header>
 
-    <!-- Blockchain Stats -->
-    <section class="stats-section">
-      <div class="stats-grid">
-        <div class="stat-card primary">
-          <div class="stat-icon">
-            <i class="fas fa-link"></i>
-          </div>
-          <div class="stat-info">
-            <h3>Synced Events</h3>
-            <p id="synced-count">0</p>
-          </div>
-          <div class="stat-change positive">
-            <i class="fas fa-check-circle"></i>
-            <span>Synced</span>
-          </div>
-        </div>
-
-        <div class="stat-card warning">
-          <div class="stat-icon">
-            <i class="fas fa-clock"></i>
-          </div>
-          <div class="stat-info">
-            <h3>Pending Events</h3>
-            <p id="pending-count">0</p>
-          </div>
-          <div class="stat-change neutral">
-            <i class="fas fa-clock"></i>
-            <span>Pending</span>
-          </div>
-        </div>
-
-        <div class="stat-card danger">
-          <div class="stat-icon">
-            <i class="fas fa-exclamation-triangle"></i>
-          </div>
-          <div class="stat-info">
-            <h3>Failed Events</h3>
-            <p id="failed-count">0</p>
-          </div>
-          <div class="stat-change negative">
-            <i class="fas fa-exclamation-triangle"></i>
-            <span>Failed</span>
-          </div>
-        </div>
-
-        <div class="stat-card info">
-          <div class="stat-icon">
-            <i class="fas fa-sync-alt"></i>
-          </div>
-          <div class="stat-info">
-            <h3>Last Sync</h3>
-            <p id="last-sync">Never</p>
-          </div>
-          <div class="stat-change neutral">
-            <i class="fas fa-history"></i>
-            <span>Time</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Blockchain Events Table -->
     <section class="data-section">
       <div class="row">
-        <div class="col-md-12">
+        <div class="col-md-4">
           <div class="card">
             <div class="card-header">
-              <h2><i class="fas fa-link"></i> Blockchain Events</h2>
+              <h2><i class="fas fa-network-wired"></i> Blockchain Status</h2>
+            </div>
+            <div class="card-body">
+              <div class="status-item">
+                <div class="status-icon">
+                  <i class="fas fa-link"></i>
+                </div>
+                <div class="status-details">
+                  <h4>Network Status</h4>
+                  <p class="status-value status-SYNCED">Synced</p>
+                </div>
+              </div>
+              
+              <div class="status-item">
+                <div class="status-icon">
+                  <i class="fas fa-hashtag"></i>
+                </div>
+                <div class="status-details">
+                  <h4>Latest Block</h4>
+                  <p class="status-value">#1,248,932</p>
+                </div>
+              </div>
+              
+              <div class="status-item">
+                <div class="status-icon">
+                  <i class="fas fa-exchange-alt"></i>
+                </div>
+                <div class="status-details">
+                  <h4>Pending Events</h4>
+                  <p class="status-value">0</p>
+                </div>
+              </div>
+              
+              <div class="status-item">
+                <div class="status-icon">
+                  <i class="fas fa-clock"></i>
+                </div>
+                <div class="status-details">
+                  <h4>Last Sync</h4>
+                  <p class="status-value">Just now</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <h2><i class="fas fa-sync-alt"></i> Sync Controls</h2>
+            </div>
+            <div class="card-body">
+              <button class="btn btn-success btn-block mb-2" id="sync-btn">
+                <i class="fas fa-sync-alt"></i> Force Sync
+              </button>
+              <button class="btn btn-outline btn-block" id="verify-btn">
+                <i class="fas fa-check-circle"></i> Verify Chain
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-8">
+          <div class="card">
+            <div class="card-header">
+              <h2><i class="fas fa-file-contract"></i> Recent Blockchain Entries</h2>
               <div class="card-actions">
-                <button class="btn btn-sm btn-outline" id="refresh-blockchain">
-                  <i class="fas fa-sync-alt"></i> Refresh
+                <button class="btn btn-sm btn-outline">
+                  <i class="fas fa-filter"></i> Filter
                 </button>
-                <button class="btn btn-sm btn-success" id="sync-all">
-                  <i class="fas fa-sync-alt"></i> Sync All
-                </button>
-                <button class="btn btn-sm btn-primary">
+                <button class="btn btn-sm btn-outline">
                   <i class="fas fa-download"></i> Export
                 </button>
               </div>
             </div>
             <div class="card-body">
               <div class="table-responsive">
-                <table class="blockchain-table">
+                <table class="audit-table">
                   <thead>
                     <tr>
                       <th>Event ID</th>
                       <th>Status</th>
                       <th>Retries</th>
-                      <th>Last Attempt</th>
-                      <th>Actions</th>
+                      <th>Timestamp</th>
+                      <th>Type</th>
                     </tr>
                   </thead>
-                  <tbody id="blockchain-tbody">
+                  <tbody id="audit-tbody">
                     <tr>
                       <td colspan="5" class="text-center">
                         <div class="empty-state">
                           <i class="fas fa-spinner fa-spin"></i>
-                          <p>Loading blockchain events...</p>
+                          <p>Loading audit records...</p>
                         </div>
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <h2><i class="fas fa-chart-bar"></i> Blockchain Statistics</h2>
+            </div>
+            <div class="card-body">
+              <div class="stats-grid" id="blockchain-stats">
+                <div class="stat-item">
+                  <div class="stat-icon bg-success">
+                    <i class="fas fa-check-circle"></i>
+                  </div>
+                  <div class="stat-info">
+                    <h3>Synced</h3>
+                    <p class="stat-value" id="synced-count">0</p>
+                  </div>
+                </div>
+                
+                <div class="stat-item">
+                  <div class="stat-icon bg-warning">
+                    <i class="fas fa-clock"></i>
+                  </div>
+                  <div class="stat-info">
+                    <h3>Pending</h3>
+                    <p class="stat-value" id="pending-count">0</p>
+                  </div>
+                </div>
+                
+                <div class="stat-item">
+                  <div class="stat-icon bg-danger">
+                    <i class="fas fa-times-circle"></i>
+                  </div>
+                  <div class="stat-info">
+                    <h3>Failed</h3>
+                    <p class="stat-value" id="failed-count">0</p>
+                  </div>
+                </div>
+                
+                <div class="stat-item">
+                  <div class="stat-icon bg-info">
+                    <i class="fas fa-sync-alt"></i>
+                  </div>
+                  <div class="stat-info">
+                    <h3>Success Rate</h3>
+                    <p class="stat-value" id="success-rate">0%</p>
+                  </div>
+                </div>
+              </div>
               
-              <!-- Pagination -->
-              <div class="pagination">
-                <button class="btn btn-outline" id="prev-page">Previous</button>
-                <span id="page-info">Page 1 of 1</span>
-                <button class="btn btn-outline" id="next-page">Next</button>
+              <div class="activity-timeline" id="activity-timeline">
+                <h3><i class="fas fa-history"></i> Recent Activity</h3>
+                <div class="timeline-list" id="timeline-list">
+                  <!-- Populated by JavaScript -->
+                </div>
               </div>
             </div>
           </div>
@@ -203,23 +265,56 @@
         link.classList.add('active');
       }
     });
+    
+    // Theme toggle functionality
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = themeToggle.querySelector('i');
+    
+    // Check for saved theme preference or respect OS preference
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    if (savedTheme === 'dark' || (!savedTheme && prefersDarkScheme.matches)) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      themeIcon.classList.remove('fa-moon');
+      themeIcon.classList.add('fa-sun');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+      themeIcon.classList.remove('fa-sun');
+      themeIcon.classList.add('fa-moon');
+    }
+    
+    themeToggle.addEventListener('click', function() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      
+      if (currentTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'light');
+        themeIcon.classList.remove('fa-sun');
+        themeIcon.classList.add('fa-moon');
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+        localStorage.setItem('theme', 'dark');
+      }
+    });
 
-    // Load blockchain data
-    async function loadBlockchainData() {
+    // Load audit data
+    async function loadAuditData() {
       try {
-        // Load blockchain audit data
         const response = await fetch(`${window.API_BASE_URL}/blockchain/audit`);
         if (response.ok) {
-          const events = await response.json();
-          const tbody = document.getElementById('blockchain-tbody');
-          
-          if (events.length === 0) {
+          const auditData = await response.json();
+          const tbody = document.getElementById('audit-tbody');
+
+          if (auditData.length === 0) {
             tbody.innerHTML = `
               <tr>
                 <td colspan="5" class="text-center">
                   <div class="empty-state">
                     <i class="fas fa-inbox"></i>
-                    <p>No blockchain events recorded yet</p>
+                    <p>No blockchain audit records found</p>
                   </div>
                 </td>
               </tr>
@@ -228,277 +323,322 @@
           }
 
           let html = '';
-          events.forEach(event => {
-            const statusClass = getStatusClass(event.status);
-            
+          auditData.forEach(item => {
+            const statusClass = window.getStatusClass(item.status);
             html += `
               <tr>
-                <td>${truncate(event.event_id, 12)}</td>
-                <td><span class="${statusClass}">${event.status}</span></td>
-                <td>${event.retry_count || 0}</td>
-                <td>${formatTimestamp(event.last_attempt) || 'N/A'}</td>
-                <td>
-                  <button class="btn btn-sm btn-outline view-event" data-id="${event.event_id}">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  ${event.status === 'FAILED' ? 
-                    `<button class="btn btn-sm btn-warning retry-event" data-id="${event.event_id}">
-                      <i class="fas fa-redo"></i>
-                    </button>` : ''}
-                </td>
+                <td><code>${window.truncate(item.event_id, 12)}</code></td>
+                <td class="${statusClass}">${item.status}</td>
+                <td><span class="retry-count">${item.retry_count || 0}</span></td>
+                <td><small>${window.formatTimestamp(item.last_attempt)}</small></td>
+                <td><span class="status-${item.status === 'SYNCED' ? 'SYNCED' : 'PENDING'}">${item.status === 'SYNCED' ? 'Synced' : 'Queued'}</span></td>
               </tr>
             `;
           });
-          
+
           tbody.innerHTML = html;
 
-          // Add event listeners for buttons
-          document.querySelectorAll('.view-event').forEach(btn => {
-            btn.addEventListener('click', function() {
-              const eventId = this.getAttribute('data-id');
-              viewEventDetails(eventId);
-            });
+          // Calculate and display statistics
+          const synced = auditData.filter(item => item.status === 'SYNCED').length;
+          const pending = auditData.filter(item => item.status === 'PENDING').length;
+          const failed = auditData.filter(item => item.status === 'FAILED').length;
+          const total = auditData.length;
+          const successRate = total > 0 ? Math.round((synced / total) * 100) : 0;
+          
+          document.getElementById('synced-count').textContent = synced;
+          document.getElementById('pending-count').textContent = pending;
+          document.getElementById('failed-count').textContent = failed;
+          document.getElementById('success-rate').textContent = successRate + '%';
+          
+          // Show activity timeline (last 5 events)
+          const timelineList = document.getElementById('timeline-list');
+          const recentEvents = auditData.slice(0, 5);
+          let timelineHtml = '';
+          recentEvents.forEach((event, index) => {
+            const time = window.formatTimestamp(event.last_attempt);
+            const statusIcon = event.status === 'SYNCED' ? '✅' : event.status === 'FAILED' ? '❌' : '⏳';
+            timelineHtml += `
+              <div class="timeline-item">
+                <div class="timeline-icon">${statusIcon}</div>
+                <div class="timeline-content">
+                  <div class="timeline-title">${event.status} - ${window.truncate(event.event_id, 16)}</div>
+                  <div class="timeline-time">${time}</div>
+                </div>
+              </div>
+            `;
           });
+          timelineList.innerHTML = timelineHtml;
 
-          document.querySelectorAll('.retry-event').forEach(btn => {
-            btn.addEventListener('click', function() {
-              const eventId = this.getAttribute('data-id');
-              retryEvent(eventId);
-            });
-          });
+          // Show info message if all retries are 0 (healthy system)
+          const allZeroRetries = auditData.every(item => item.retry_count === 0);
+          if (allZeroRetries && auditData.length > 0) {
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'alert alert-info';
+            infoDiv.style.marginTop = '16px';
+            infoDiv.innerHTML = `
+              <i class="fas fa-info-circle"></i>
+              <strong>System Healthy:</strong> All events synced on first attempt (no retries needed)
+            `;
+            document.querySelector('.card-body').appendChild(infoDiv);
+          }
         } else {
-          document.getElementById('blockchain-tbody').innerHTML = `
+          document.getElementById('audit-tbody').innerHTML = `
             <tr>
               <td colspan="5" class="text-center">
                 <div class="empty-state">
                   <i class="fas fa-exclamation-triangle"></i>
-                  <p>Error loading blockchain events</p>
+                  <p>Error loading audit records</p>
                 </div>
               </td>
             </tr>
           `;
         }
-      } catch (err) {
-        document.getElementById('blockchain-tbody').innerHTML = `
+      } catch (error) {
+        document.getElementById('audit-tbody').innerHTML = `
           <tr>
             <td colspan="5" class="text-center">
               <div class="empty-state">
                 <i class="fas fa-exclamation-triangle"></i>
-                <p>Error: ${err.message}</p>
+                <p>Error: ${error.message}</p>
               </div>
             </td>
           </tr>
         `;
       }
-
-      // Load stats
-      try {
-        const statsResponse = await fetch(`${window.API_BASE_URL}/api/events/pending/count`);
-        if (statsResponse.ok) {
-          const stats = await statsResponse.json();
-          document.getElementById('pending-count').textContent = stats.count || 0;
-        }
-      } catch (err) {
-        console.error('Error loading pending count:', err);
-      }
     }
-
-    // View event details
-    async function viewEventDetails(eventId) {
-      try {
-        const response = await fetch(`${window.API_BASE_URL}/blockchain/audit`); // In a real app, this would be a specific event endpoint
-        if (response.ok) {
-          const events = await response.json();
-          const event = events.find(e => e.event_id === eventId);
-          if (event) {
-            alert(`Event Details:\nID: ${event.event_id}\nStatus: ${event.status}\nRetries: ${event.retry_count}\nLast Attempt: ${formatTimestamp(event.last_attempt)}`);
-          }
-        } else {
-          alert('Error loading event details');
-        }
-      } catch (err) {
-        alert(`Error: ${err.message}`);
-      }
-    }
-
-    // Retry event
-    async function retryEvent(eventId) {
-      if (!confirm(`Are you sure you want to retry event ${eventId}?`)) {
-        return;
-      }
-
-      try {
-        // In a real app, this would call a retry endpoint
-        showNotification(`Retry initiated for event ${eventId}.`, 'success');
-        loadBlockchainData(); // Reload the data
-      } catch (err) {
-        showNotification(`Error: ${err.message}`, 'error');
-      }
-    }
-
-    // Sync all pending events
-    async function syncAllEvents() {
-      if (!confirm('Are you sure you want to sync all pending events?')) {
-        return;
-      }
-
+    
+    // Initialize
+    loadAuditData();
+    
+    // Button event handlers
+    document.getElementById('sync-btn').addEventListener('click', async function() {
+      const originalHTML = this.innerHTML;
+      const originalClassList = this.className;
+      
+      this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+      this.disabled = true;
+      this.classList.remove('btn-success');
+      this.classList.add('btn-outline');
+      
       try {
         const response = await fetch(`${window.API_BASE_URL}/api/events/sync`, {
           method: 'POST'
         });
-
+        
         if (response.ok) {
-          showNotification('Sync initiated for all pending events.', 'success');
-          loadBlockchainData(); // Reload the data
+          this.innerHTML = '<i class="fas fa-check"></i> Sync Complete';
+          
+          setTimeout(() => {
+            this.innerHTML = '<i class="fas fa-sync-alt"></i> Force Sync';
+            this.className = originalClassList;
+            this.disabled = false;
+          }, 2000);
+          
+          showNotification('Blockchain sync completed successfully!', 'success');
         } else {
-          showNotification('Failed to initiate sync.', 'error');
+          const errorData = await response.json();
+          throw new Error(errorData.detail || 'Sync failed');
         }
-      } catch (err) {
-        showNotification(`Error: ${err.message}`, 'error');
+      } catch (error) {
+        this.innerHTML = '<i class="fas fa-sync-alt"></i> Force Sync';
+        this.className = originalClassList;
+        this.disabled = false;
+        
+        showNotification(`Error syncing blockchain: ${error.message}`, 'error');
       }
-    }
-
-    // Show notification
-    function showNotification(message, type = 'info') {
-      // Create notification element
-      const notification = document.createElement('div');
-      notification.className = `notification notification-${type}`;
-      notification.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-        <span>${message}</span>
-        <button class="close-notification">&times;</button>
-      `;
-      
-      // Add to body
-      document.body.appendChild(notification);
-      
-      // Auto remove after 3 seconds
-      setTimeout(() => {
-        notification.remove();
-      }, 3000);
-      
-      // Add close functionality
-      notification.querySelector('.close-notification').addEventListener('click', () => {
-        notification.remove();
-      });
-    }
-
-    // Event listeners
-    document.getElementById('refresh-blockchain').addEventListener('click', loadBlockchainData);
-    document.getElementById('sync-all').addEventListener('click', syncAllEvents);
-
-    // Initial load
-    loadBlockchainData();
-    setInterval(loadBlockchainData, 30000); // Refresh every 30 seconds
-
-    // Add notification styles dynamically
+    });
+    
+    document.getElementById('verify-btn').addEventListener('click', async function() {
+      try {
+        const response = await fetch(`${window.API_BASE_URL}/api/blockchain/verify`, {
+          method: 'POST'
+        });
+        
+        if (response.ok) {
+          showNotification('Chain verification initiated successfully!', 'success');
+        } else {
+          const errorData = await response.json();
+          showNotification(`Verification failed: ${errorData.detail || 'Unknown error'}`, 'error');
+        }
+      } catch (error) {
+        showNotification(`Error initiating verification: ${error.message}`, 'error');
+      }
+    });
+    
+    // Add additional styles
     const style = document.createElement('style');
     style.textContent = `
-      .notification {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 16px 20px;
-        border-radius: 8px;
-        background: white;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        z-index: 10000;
-        animation: slideInRight 0.3s ease-out;
-        border-left: 4px solid var(--primary);
+      .mb-2 {
+        margin-bottom: 8px;
       }
       
-      .notification.notification-success {
-        border-left-color: var(--success);
-      }
-      
-      .notification.notification-error {
-        border-left-color: var(--danger);
-      }
-      
-      .notification i {
-        font-size: 18px;
-      }
-      
-      .notification.notification-success i {
-        color: var(--success);
-      }
-      
-      .notification.notification-error i {
-        color: var(--danger);
-      }
-      
-      .close-notification {
-        background: none;
-        border: none;
-        font-size: 20px;
-        cursor: pointer;
-        color: var(--gray);
-        padding: 0;
-        width: 24px;
-        height: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      
-      .table-responsive {
-        overflow-x: auto;
-      }
-      
-      .blockchain-table {
+      .audit-table {
         width: 100%;
         border-collapse: collapse;
       }
       
-      .blockchain-table th,
-      .blockchain-table td {
+      .audit-table th,
+      .audit-table td {
         padding: 12px;
         text-align: left;
         border-bottom: 1px solid var(--border);
       }
       
-      .blockchain-table th {
-        background: var(--hover-bg);
+      .audit-table th {
+        background: var(--surface-light);
         font-weight: 600;
-        color: var(--gray);
+        color: var(--text-secondary);
       }
       
-      .blockchain-table tr:hover {
+      .audit-table tr:hover {
         background: var(--hover-bg);
       }
       
-      .pagination {
+      .hash-cell {
+        font-family: monospace;
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+      
+      .chart-placeholder {
+        text-align: center;
+        padding: 40px 20px;
+        background: var(--surface-light);
+        border-radius: 10px;
+      }
+      
+      .chart-demo {
         display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 16px;
+        justify-content: space-around;
+        align-items: flex-end;
+        height: 200px;
         margin-top: 20px;
       }
       
-      .pagination .btn {
-        padding: 8px 16px;
+      .chart-bar {
+        width: 30px;
+        background: var(--primary);
+        border-radius: 4px 4px 0 0;
       }
       
-      #page-info {
-        font-weight: 500;
-        color: var(--gray);
+      .btn-block {
+        width: 100%;
       }
       
-      @keyframes slideInRight {
-        from {
-          transform: translateX(100%);
-          opacity: 0;
-        }
-        to {
-          transform: translateX(0);
-          opacity: 1;
-        }
+      .alert {
+        padding: 12px 16px;
+        border-radius: 10px;
+        margin: 16px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      
+      .alert-info {
+        background: var(--info-light);
+        border: 1px solid var(--info);
+        color: var(--info);
+      }
+      
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      
+      .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+        background: var(--surface-light);
+        border-radius: 12px;
+      }
+      
+      .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        color: white;
+      }
+      
+      .bg-success { background: var(--success); }
+      .bg-warning { background: var(--warning); }
+      .bg-danger { background: var(--danger); }
+      .bg-info { background: var(--info); }
+      
+      .stat-info h3 {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin: 0 0 4px 0;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      
+      .stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+      }
+      
+      .activity-timeline h3 {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 16px 0;
+      }
+      
+      .timeline-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      
+      .timeline-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: var(--surface-light);
+        border-radius: 10px;
+        border-left: 3px solid var(--primary);
+      }
+      
+      .timeline-icon {
+        font-size: 20px;
+      }
+      
+      .timeline-content {
+        flex: 1;
+      }
+      
+      .timeline-title {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+      }
+      
+      .timeline-time {
+        font-size: 12px;
+        color: var(--text-muted);
       }
     `;
     document.head.appendChild(style);
+  </script>
+  
+  <script src="js/common.js"></script>
+  <script src="js/blockchain.js"></script>
+  <script>
+    // Load audit data when page loads
+    document.addEventListener("DOMContentLoaded", function() {
+      loadAuditData();
+    });
   </script>
 </body>
 </html>

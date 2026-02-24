@@ -10,10 +10,12 @@ This script will:
 import json
 import sys
 import os
+from pathlib import Path
 from web3 import Web3
 
 # Add the project root to the Python path
-sys.path.append('/Users/hariharansundaramoorthy/HTMS_Project')
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.append(str(PROJECT_ROOT))
 
 def test_blockchain_connection():
     """Test if we can connect to Ganache and interact with the blockchain."""
@@ -47,7 +49,8 @@ def test_contract_deployment():
     
     # Load deployment info
     try:
-        with open("/Users/hariharansundaramoorthy/HTMS_Project/backend/blockchain_contracts/output/deployment_info.json", "r") as deploy_file:
+        deploy_path = PROJECT_ROOT / "backend" / "blockchain_contracts" / "output" / "deployment_info.json"
+        with open(deploy_path, "r") as deploy_file:
             deployment_info = json.load(deploy_file)
     except FileNotFoundError:
         print("❌ Deployment info not found. The contract may not be deployed yet.")

@@ -1,7 +1,9 @@
 // Load dashboard stats
 async function loadDashboard() {
   try {
+    console.log('Loading dashboard from:', window.API_BASE_URL + "/stats/summary");
     const res = await fetch(window.API_BASE_URL + "/stats/summary");
+    console.log('Response status:', res.status);
     const data = await res.json();
 
     document.getElementById("backend-status").innerText = "Backend Connected";
@@ -14,7 +16,9 @@ async function loadDashboard() {
     document.getElementById("suspended-readers").innerText = formatNumber(data.suspended_readers);
     document.getElementById("blockchain-pending").innerText = formatNumber(data.pending_blockchain);
 
+    console.log('✅ Dashboard loaded successfully');
   } catch (e) {
+    console.error('❌ Dashboard load error:', e);
     document.getElementById("backend-status").innerText = "Backend Not Reachable";
     document.getElementById("backend-status").className = "status-disconnected";
   }
@@ -125,29 +129,54 @@ async function loadAdditionalData() {
       let html = '';
 
       if (data.length === 0) {
-        showEmptyState("recent-transactions", "No recent transactions");
+        document.getElementById("recent-transactions").innerHTML = `
+          <tr>
+            <td colspan="5" class="text-center">
+              <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>No recent transactions</p>
+              </div>
+            </td>
+          </tr>
+        `;
       } else {
         data.forEach(tx => {
           const decisionClass = getStatusClass(tx.decision);
           html += `
-            <div class="transaction-card">
-              <div class="transaction-header">
-                <strong>${tx.reader_id}</strong>
-                <span class="${decisionClass}">${tx.decision}</span>
-              </div>
-              <div class="transaction-meta">
-                <small>${formatTimestamp(tx.timestamp)}</small>
-              </div>
-            </div>
+            <tr>
+              <td>${formatTimestamp(tx.timestamp).split(' ')[1]}</td>
+              <td>${tx.reader_id}</td>
+              <td><span class="${decisionClass}">${tx.decision}</span></td>
+              <td>${tx.confidence || 'N/A'}</td>
+              <td><span class="status-ACTIVE">Completed</span></td>
+            </tr>
           `;
         });
         document.getElementById("recent-transactions").innerHTML = html;
       }
     } else {
-      document.getElementById("recent-transactions").innerHTML = "<p>Error loading recent transactions.</p>";
+      document.getElementById("recent-transactions").innerHTML = `
+        <tr>
+          <td colspan="5" class="text-center">
+            <div class="empty-state">
+              <i class="fas fa-exclamation-triangle"></i>
+              <p>Error loading recent transactions</p>
+            </div>
+          </td>
+        </tr>
+      `;
     }
   } catch (err) {
-    document.getElementById("recent-transactions").innerHTML = `<p>Error: ${err.message}</p>`;
+    document.getElementById("recent-transactions").innerHTML = `
+      <tr>
+        <td colspan="5" class="text-center">
+          <div class="empty-state">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>Error: ${err.message}</p>
+          </div>
+        </td>
+      </tr>
+    `;
   }
 
   // Load blockchain status
@@ -186,9 +215,19 @@ async function loadAdditionalData() {
 
 // Trigger blockchain sync
 async function triggerSync() {
+  // Check if admin key is set
+  const adminKey = window.getAdminApiKey();
+  if (!adminKey) {
+    showNotification('Please enter admin API key in Settings first', 'error');
+    return;
+  }
+  
   try {
     const response = await fetch(`${window.API_BASE_URL}/api/events/sync`, {
-      method: 'POST'
+      method: 'POST',
+      headers: {
+        ...window.adminHeaders()
+      }
     });
 
     if (response.ok) {
@@ -197,7 +236,8 @@ async function triggerSync() {
       // Reload the blockchain status after a short delay
       setTimeout(loadAdditionalData, 1000);
     } else {
-      showNotification('Failed to trigger sync.', 'error');
+      const errorData = await response.json();
+      showNotification(`Failed to trigger sync: ${errorData.detail || 'Unknown error'}`, 'error');
     }
   } catch (err) {
     showNotification(`Error triggering sync: ${err.message}`, 'error');
@@ -214,30 +254,28 @@ function showNotification(message, type = 'info') {
     <span>${message}</span>
     <button class="close-notification">&times;</button>
   `;
-  
+
   // Add to body
   document.body.appendChild(notification);
-  
+
   // Auto remove after 3 seconds
   setTimeout(() => {
     notification.remove();
   }, 3000);
-  
+
   // Add close functionality
   notification.querySelector('.close-notification').addEventListener('click', () => {
     notification.remove();
   });
 }
 
-// Load immediately
-loadDashboard();
-loadAdditionalData();
-
-// Auto-refresh dashboard stats every 5 seconds
-setInterval(loadDashboard, 5000);
-
-// Refresh additional data periodically (every 30 seconds)
-setInterval(loadAdditionalData, 30000);
+// Load once on page load
+document.addEventListener("DOMContentLoaded", function() {
+  console.log('📊 Dashboard initializing...');
+  console.log('API Base URL:', window.API_BASE_URL);
+  loadDashboard();
+  loadAdditionalData();
+});
 
 // Add notification styles dynamically
 const style = document.createElement('style');
@@ -247,9 +285,9 @@ style.textContent = `
     top: 20px;
     right: 20px;
     padding: 16px 20px;
-    border-radius: 8px;
+    border-radius: 12px;
     background: white;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -257,41 +295,48 @@ style.textContent = `
     animation: slideInRight 0.3s ease-out;
     border-left: 4px solid var(--primary);
   }
-  
+
   .notification.notification-success {
     border-left-color: var(--success);
   }
-  
+
   .notification.notification-error {
     border-left-color: var(--danger);
   }
-  
+
   .notification i {
     font-size: 18px;
   }
-  
+
   .notification.notification-success i {
     color: var(--success);
   }
-  
+
   .notification.notification-error i {
     color: var(--danger);
   }
-  
+
   .close-notification {
     background: none;
     border: none;
     font-size: 20px;
     cursor: pointer;
-    color: var(--gray);
+    color: var(--text-muted);
     padding: 0;
     width: 24px;
     height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 50%;
+    transition: var(--transition);
   }
   
+  .close-notification:hover {
+    background: var(--hover-bg);
+    color: var(--text-primary);
+  }
+
   @keyframes slideInRight {
     from {
       transform: translateX(100%);

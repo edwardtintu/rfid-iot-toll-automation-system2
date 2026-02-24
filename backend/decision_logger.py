@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from database import DecisionTelemetry, SessionLocal
 
 def log_decision(event_id, reader_id, trust_score, reader_status,
-                 decision, reason, ml_a, ml_b, anomaly):
+                 decision, reason, ml_a, ml_b, anomaly, confidence=None):
     """
     Log decision telemetry for audit and analysis
     
@@ -33,7 +33,8 @@ def log_decision(event_id, reader_id, trust_score, reader_status,
             reason=reason,
             ml_score_a=ml_a,
             ml_score_b=ml_b,
-            anomaly_flag=anomaly
+            anomaly_flag=anomaly,
+            confidence=confidence
         )
         db.add(telemetry_record)
         db.commit()

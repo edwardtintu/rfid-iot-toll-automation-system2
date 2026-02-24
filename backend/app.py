@@ -319,6 +319,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # Simulation mode flag
 SIMULATION_MODE = os.getenv("SIMULATION_MODE", "false").lower() == "true"
+SEED_DEMO_DATA = os.getenv("SEED_DEMO_DATA", "true").lower() == "true"
+ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "admin123")
+
+
+def require_admin_key(x_api_key: str = Header(None, alias="X-API-Key")):
+    """Dependency to require admin API key for protected endpoints."""
+    if not x_api_key or x_api_key != ADMIN_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing admin API key")
+    return x_api_key
 
 app = FastAPI(title="Hybrid Toll Management System")
 

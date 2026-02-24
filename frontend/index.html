@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HTMS - Hybrid Toll Management System</title>
+  <title>Government Toll Management System - Ministry of Transport</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" />
   <link rel="stylesheet" href="css/style.css" />
@@ -12,8 +12,8 @@
   <!-- Sidebar Navigation -->
   <aside class="sidebar">
     <div class="logo">
-      <i class="fas fa-road"></i>
-      <h2>HTMS</h2>
+      <i class="fas fa-balance-scale"></i>
+      <h2>Hybrid Toll Management System</h2>
     </div>
     <nav class="nav-menu">
       <a href="index.html" class="nav-link active">
@@ -44,7 +44,19 @@
         <i class="fas fa-cog"></i>
         <span>Reader Management</span>
       </a>
-    </nav>
+          <a href="admin-settings.html" class="nav-link">
+        <i class="fas fa-user-shield"></i>
+        <span>Admin Settings</span>
+      </a>    </nav>
+    
+    <!-- User Profile Section -->
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar">A</div>
+      <div class="sidebar-user-info">
+        <h4 class="sidebar-user-name">Admin User</h4>
+        <p class="sidebar-user-role">System Administrator</p>
+      </div>
+    </div>
   </aside>
 
   <!-- Main Content -->
@@ -55,13 +67,18 @@
         <button class="menu-toggle">
           <i class="fas fa-bars"></i>
         </button>
-        <h1>Dashboard</h1>
+        <div class="header-title">
+          Hybrid Toll Management System
+        </div>
       </div>
       <div class="header-right">
         <div class="status-indicator">
           <i class="fas fa-circle"></i>
           <span id="backend-status">Connecting...</span>
         </div>
+        <button class="theme-toggle" id="theme-toggle">
+          <i class="fas fa-moon"></i>
+        </button>
         <div class="user-profile">
           <i class="fas fa-user-circle"></i>
           <span>Admin</span>
@@ -156,6 +173,35 @@
           </div>
         </div>
       </div>
+      
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <div class="card">
+          <div class="card-header">
+            <h2><i class="fas fa-bolt"></i> Quick Actions</h2>
+          </div>
+          <div class="card-body">
+            <div class="actions-grid">
+              <button class="action-btn primary">
+                <i class="fas fa-plus"></i>
+                <span>Add Reader</span>
+              </button>
+              <button class="action-btn success">
+                <i class="fas fa-sync-alt"></i>
+                <span>Sync Blockchain</span>
+              </button>
+              <button class="action-btn warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Review Flags</span>
+              </button>
+              <button class="action-btn info">
+                <i class="fas fa-chart-bar"></i>
+                <span>Generate Report</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Charts and Data Section -->
@@ -228,11 +274,28 @@
               </div>
             </div>
             <div class="card-body">
-              <div class="transactions-list" id="recent-transactions">
-                <div class="empty-state">
-                  <i class="fas fa-spinner fa-spin"></i>
-                  <p>Loading transactions...</p>
-                </div>
+              <div class="table-responsive">
+                <table class="transactions-table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Reader</th>
+                      <th>Decision</th>
+                      <th>Confidence</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recent-transactions">
+                    <tr>
+                      <td colspan="5" class="text-center">
+                        <div class="empty-state">
+                          <i class="fas fa-spinner fa-spin"></i>
+                          <p>Loading transactions...</p>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -290,6 +353,15 @@
     </section>
   </main>
 
+  <!-- Footer for government branding -->
+  <footer style="position: fixed; bottom: 0; width: 100%; background: #0f2a4d; color: white; text-align: center; padding: 10px; font-size: 12px; z-index: 1000; border-top: 2px solid #005ea2;">
+    <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+      <div>Ministry of Transport & Highways</div>
+      <div>Â© 2026 Government of India - Hybrid Toll Management System</div>
+      <div>Secure â€¢ Confidential â€¢ Official</div>
+    </div>
+  </footer>
+  
   <script src="js/common.js"></script>
   <script src="js/app.js"></script>
   <script>
@@ -313,6 +385,83 @@
       if (window.triggerSync) {
         window.triggerSync();
       }
+    });
+    
+    // Theme toggle functionality
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = themeToggle.querySelector('i');
+    
+    // Check for saved theme preference or respect OS preference
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    if (savedTheme === 'dark' || (!savedTheme && prefersDarkScheme.matches)) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      themeIcon.classList.remove('fa-moon');
+      themeIcon.classList.add('fa-sun');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+      themeIcon.classList.remove('fa-sun');
+      themeIcon.classList.add('fa-moon');
+    }
+    
+    themeToggle.addEventListener('click', function() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      
+      if (currentTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'light');
+        themeIcon.classList.remove('fa-sun');
+        themeIcon.classList.add('fa-moon');
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+        localStorage.setItem('theme', 'dark');
+      }
+    });
+    
+    // Quick actions functionality
+    document.querySelectorAll('.action-btn').forEach(button => {
+      button.addEventListener('click', function() {
+        const action = this.querySelector('span').textContent;
+        
+        switch(action) {
+          case 'Add Reader':
+            window.location.href = 'reader-management.html';
+            break;
+          case 'Sync Blockchain':
+            document.getElementById('sync-btn').click();
+            break;
+          case 'Review Flags':
+            window.location.href = 'decisions.html';
+            break;
+          case 'Generate Report':
+            // Show in-page notification instead of alert
+            const notification = document.createElement('div');
+            notification.className = 'notification notification-info';
+            notification.innerHTML = `
+              <i class="fas fa-info-circle"></i>
+              <span>Report generation would start here...</span>
+              <button class="close-notification">&times;</button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+              notification.remove();
+            }, 3000);
+            
+            // Add close functionality
+            notification.querySelector('.close-notification').addEventListener('click', () => {
+              notification.remove();
+            });
+            break;
+          default:
+            console.log('Unknown action:', action);
+        }
+      });
     });
   </script>
 </body>

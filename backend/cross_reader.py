@@ -32,7 +32,7 @@ def detect_outlier_reader(reader_id, window_minutes=10):
         avg_query = db.query(func.avg(reader_counts.c.cnt)).select_from(
             db.query(
                 TollEvent.reader_id,
-                func.count(TollEvent.id).label('cnt')
+                func.count(TollEvent.event_id).label('cnt')
             )
             .filter(TollEvent.timestamp > time_threshold.timestamp())
             .filter(TollEvent.reader_id.in_(all_reader_ids))
@@ -44,7 +44,7 @@ def detect_outlier_reader(reader_id, window_minutes=10):
         avg_cnt = avg_cnt_result[0] if avg_cnt_result and avg_cnt_result[0] else 0
         
         # Get transaction count for the specific reader
-        reader_cnt = db.query(func.count(TollEvent.id)).filter(
+        reader_cnt = db.query(func.count(TollEvent.event_id)).filter(
             and_(
                 TollEvent.reader_id == reader_id,
                 TollEvent.timestamp > time_threshold.timestamp()
