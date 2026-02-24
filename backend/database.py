@@ -1,6 +1,6 @@
 # backend/database.py
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
 
@@ -184,6 +184,40 @@ class TagSuspicion(Base):
     suspicion_multiplier = Column(Float, default=1.5)  # Fraud detection sensitivity multiplier
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)  # Auto-expire after configurable duration
+
+
+
+# ============================
+# Patent #4: VDF Chain Models
+# ============================
+
+# VDF Chain Link — each toll transaction's sequential VDF entry
+class VDFChainLink(Base):
+    __tablename__ = "vdf_chain_links"
+
+    sequence_number = Column(Integer, primary_key=True)  # Sequential position in chain
+    event_id = Column(String(64), nullable=False, index=True)  # References toll event
+    tx_hash = Column(String(128), nullable=False)  # Transaction hash
+    previous_vdf_output = Column(String(128), nullable=False)  # VDF output from link N-1
+    vdf_input = Column(Text, nullable=False)  # Computed input to VDF (prev_output + tx_data)
+    vdf_output = Column(String(128), nullable=False)  # Result of VDF computation
+    vdf_proof = Column(Text, nullable=True)  # Proof data (JSON checkpoints)
+    difficulty = Column(Integer, nullable=False)  # VDF difficulty used
+    computation_time_ms = Column(Integer, nullable=True)  # Time taken for VDF computation
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+# VDF Anchor — blockchain anchor checkpoints
+class VDFAnchor(Base):
+    __tablename__ = "vdf_anchors"
+
+    anchor_id = Column(Integer, primary_key=True, autoincrement=True)
+    start_sequence = Column(Integer, nullable=False)  # First chain link in this anchor
+    end_sequence = Column(Integer, nullable=False)  # Last chain link in this anchor
+    chain_hash = Column(String(128), nullable=False)  # Cumulative hash of the chain segment
+    vdf_output_at_anchor = Column(String(128), nullable=False)  # VDF output at anchor point
+    blockchain_tx_hash = Column(String(128), nullable=True)  # Blockchain tx hash once anchored
+    anchor_status = Column(String(16), default="PENDING")  # PENDING / ANCHORED / FAILED
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 def init_db():
     Base.metadata.create_all(engine)

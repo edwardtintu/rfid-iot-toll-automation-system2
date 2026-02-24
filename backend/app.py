@@ -696,6 +696,27 @@ async def toll_endpoint(request: Request):
         )
         db.add(toll_event)
 
+        # Step 6.6 — Add to VDF chain for tamper-evident sequencing (Patent #4)
+        try:
+            from vdf_chain import VDFChainManager
+            vdf_manager = VDFChainManager(db=db)
+            vdf_result = vdf_manager.chain_transaction(
+                event_id=tx_hash[:16],
+                tx_hash=tx_hash,
+                reader_id=reader_id,
+                timestamp=timestamp,
+                db=db
+            )
+            result["vdf_chain"] = {
+                "sequence": vdf_result.get("sequence_number"),
+                "vdf_output": vdf_result.get("vdf_output", "")[:16] + "...",
+                "anchor_created": vdf_result.get("anchor_created", False)
+            }
+        except Exception as e:
+            # VDF chain failure should not block toll processing
+            print(f"[VDF CHAIN] Warning: {e}")
+            result["vdf_chain"] = {"error": str(e)}
+
         # Step 7 — Deduct balance if allowed
         final_balance = card_data['balance']
         if result["action"] == "allow":
@@ -824,6 +845,42 @@ def get_pending_count():
         return {"count": count}
     finally:
         db.close()
+
+# ============================
+# Patent #4: VDF Chain API Endpoints
+# ============================
+
+@app.get("/api/vdf/chain/status")
+def get_vdf_chain_status():
+    """Get the current state of the VDF chain — head, total links, latest anchor."""
+    from vdf_chain import VDFChainManager
+    manager = VDFChainManager()
+    return manager.get_chain_state()
+
+@app.get("/api/vdf/chain/verify")
+def verify_vdf_chain(start: int = None, end: int = None):
+    """Verify the integrity of the VDF chain over a range.
+    Detects any tampered, inserted, deleted, or reordered transactions."""
+    from vdf_chain import VDFChainManager
+    manager = VDFChainManager()
+    return manager.verify_chain_integrity(start_seq=start, end_seq=end)
+
+@app.get("/api/vdf/chain/link/{sequence}")
+def get_vdf_chain_link(sequence: int):
+    """Get a specific VDF chain link by sequence number."""
+    from vdf_chain import VDFChainManager
+    manager = VDFChainManager()
+    link = manager.get_chain_link(sequence)
+    if not link:
+        raise HTTPException(status_code=404, detail=f"Chain link {sequence} not found")
+    return link
+
+@app.get("/api/vdf/anchors")
+def get_vdf_anchors():
+    """List all blockchain anchor checkpoints from the VDF chain."""
+    from vdf_chain import VDFChainManager
+    manager = VDFChainManager()
+    return manager.get_anchors()
 
 @app.get("/stats/summary")
 def get_summary_stats():
